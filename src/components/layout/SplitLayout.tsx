@@ -14,7 +14,7 @@ export const SplitLayout: React.FC = () => {
         <div className="grid grid-cols-2 w-full max-w-xs bg-white dark:bg-neutral-900 p-1 rounded-xl shadow-xs border border-neutral-200/80 dark:border-neutral-700/80">
           <button
             onClick={() => setActiveMobileTab('chat')}
-            className={`py-1.5 text-xs font-bold rounded-lg transition active:scale-95 ${
+            className={`py-1.5 text-xs font-bold rounded-lg transition active:scale-95 whitespace-nowrap cursor-pointer ${
               activeMobileTab === 'chat'
                 ? 'bg-neutral-900 text-white dark:bg-white dark:text-neutral-900 shadow-xs'
                 : 'text-neutral-500 hover:text-neutral-800 dark:text-neutral-400 dark:hover:text-white'
@@ -24,13 +24,13 @@ export const SplitLayout: React.FC = () => {
           </button>
           <button
             onClick={() => setActiveMobileTab('preview')}
-            className={`py-1.5 text-xs font-bold rounded-lg transition active:scale-95 ${
+            className={`py-1.5 text-xs font-bold rounded-lg transition active:scale-95 whitespace-nowrap cursor-pointer ${
               activeMobileTab === 'preview'
                 ? 'bg-neutral-900 text-white dark:bg-white dark:text-neutral-900 shadow-xs'
                 : 'text-neutral-500 hover:text-neutral-800 dark:text-neutral-400 dark:hover:text-white'
             }`}
           >
-            📑 노션 템플릿 미리보기
+            📑 템플릿 미리보기
           </button>
         </div>
       </div>

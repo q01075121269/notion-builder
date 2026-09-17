@@ -11,9 +11,8 @@ import {
   Code2, 
   Share2, 
   Sparkles, 
-  UploadCloud, 
   Loader2,
-  BookOpen
+  Zap
 } from 'lucide-react';
 
 export const NotionMockup: React.FC = () => {
@@ -24,8 +23,7 @@ export const NotionMockup: React.FC = () => {
     setIsRawJsonModalOpen, 
     setIsExportModalOpen,
     publishToNotion,
-    isPublishing,
-    setIsGuideModalOpen
+    isPublishing
   } = useApp();
 
   if (!currentTemplate) {
@@ -45,81 +43,79 @@ export const NotionMockup: React.FC = () => {
   return (
     <div className="flex flex-col h-full bg-white dark:bg-notion-dark-bg overflow-y-auto">
       
-      {/* Notion Preview Top Toolbar */}
-      <div className="sticky top-0 z-20 flex flex-wrap items-center justify-between gap-2 px-4 sm:px-8 py-2.5 bg-white/90 dark:bg-notion-dark-bg/90 backdrop-blur border-b border-neutral-200/70 dark:border-neutral-800">
+      {/* Notion Preview Top Toolbar (정돈된 액션 바) */}
+      <div className="sticky top-0 z-20 h-12 flex items-center justify-between gap-2 px-3 sm:px-6 bg-white/95 dark:bg-notion-dark-bg/95 backdrop-blur-md border-b border-neutral-200/80 dark:border-notion-dark-border flex-nowrap shrink-0 select-none">
         
-        {/* View Mode Switcher: Notion Mockup vs Structure Tree */}
-        <div className="flex items-center p-0.5 rounded-lg bg-neutral-100 dark:bg-neutral-800 text-xs">
+        {/* [노션 페이지 뷰 | 구조 트리 뷰] 토글 */}
+        <div className="flex items-center p-0.5 rounded-xl bg-neutral-100 dark:bg-neutral-800 text-xs shrink-0">
           <button
             onClick={() => setPreviewMode('notion')}
-            className={`flex items-center space-x-1.5 px-3 py-1.5 rounded-md font-medium transition ${
+            className={`flex items-center space-x-1.5 px-2.5 sm:px-3 py-1.5 rounded-lg font-medium transition whitespace-nowrap cursor-pointer ${
               previewMode === 'notion'
-                ? 'bg-white dark:bg-notion-dark-card text-neutral-900 dark:text-white shadow-xs'
-                : 'text-neutral-500 hover:text-neutral-700 dark:text-neutral-400'
+                ? 'bg-white dark:bg-notion-dark-card text-neutral-900 dark:text-white shadow-xs font-semibold'
+                : 'text-neutral-500 hover:text-neutral-800 dark:text-neutral-400 dark:hover:text-neutral-200'
             }`}
           >
-            <FileText className="w-3.5 h-3.5" />
-            <span>노션 페이지 뷰</span>
+            <FileText className="w-3.5 h-3.5 shrink-0" />
+            <span className="hidden sm:inline">노션 페이지 뷰</span>
+            <span className="sm:hidden">페이지</span>
           </button>
           <button
             onClick={() => setPreviewMode('tree')}
-            className={`flex items-center space-x-1.5 px-3 py-1.5 rounded-md font-medium transition ${
+            className={`flex items-center space-x-1.5 px-2.5 sm:px-3 py-1.5 rounded-lg font-medium transition whitespace-nowrap cursor-pointer ${
               previewMode === 'tree'
-                ? 'bg-white dark:bg-notion-dark-card text-neutral-900 dark:text-white shadow-xs'
-                : 'text-neutral-500 hover:text-neutral-700 dark:text-neutral-400'
+                ? 'bg-white dark:bg-notion-dark-card text-neutral-900 dark:text-white shadow-xs font-semibold'
+                : 'text-neutral-500 hover:text-neutral-800 dark:text-neutral-400 dark:hover:text-neutral-200'
             }`}
           >
-            <GitBranch className="w-3.5 h-3.5" />
-            <span>구조 트리 뷰</span>
+            <GitBranch className="w-3.5 h-3.5 shrink-0" />
+            <span className="hidden sm:inline">구조 트리 뷰</span>
+            <span className="sm:hidden">트리</span>
           </button>
         </div>
 
-        {/* Action Buttons: [내 노션에 템플릿 생성하기] & Quick Actions */}
-        <div className="flex items-center space-x-2 text-xs">
-          
-          {/* 5단계: 쉬운 설명서 열기 버튼 */}
+        {/* 액션 버튼: [공유], [</> JSON], [⚡ 내 노션에 템플릿 생성하기(Primary)] */}
+        <div className="flex items-center space-x-1.5 sm:space-x-2 text-xs shrink-0 flex-nowrap">
+          {/* 1. 공유 */}
           <button
-            onClick={() => setIsGuideModalOpen(true)}
-            className="flex items-center space-x-1.5 px-3 py-1.5 rounded-lg font-semibold text-amber-900 bg-amber-100 hover:bg-amber-200 dark:bg-amber-950/60 dark:text-amber-200 dark:hover:bg-amber-900/60 border border-amber-300/80 dark:border-amber-800/60 transition shadow-xs"
-            title="이 템플릿의 초보자 맞춤형 친절 사용 설명서 열기"
+            onClick={() => setIsExportModalOpen(true)}
+            className="flex items-center space-x-1.5 px-2.5 py-1.5 rounded-xl border border-neutral-200 dark:border-neutral-700 bg-white dark:bg-neutral-800 text-neutral-700 dark:text-neutral-200 hover:bg-neutral-50 dark:hover:bg-neutral-700 transition whitespace-nowrap cursor-pointer shadow-2xs"
+            title="템플릿 공유 및 마크다운 내보내기"
           >
-            <BookOpen className="w-3.5 h-3.5 text-amber-600 dark:text-amber-400" />
-            <span>쉬운 설명서</span>
+            <Share2 className="w-3.5 h-3.5 text-neutral-500 shrink-0" />
+            <span className="hidden md:inline">공유</span>
           </button>
 
-          {/* Main Action: Publish to Notion (2단계 핵심 액션 버튼) */}
+          {/* 2. </> JSON */}
+          <button
+            onClick={() => setIsRawJsonModalOpen(true)}
+            className="flex items-center space-x-1.5 px-2.5 py-1.5 rounded-xl border border-neutral-200 dark:border-neutral-700 bg-white dark:bg-neutral-800 text-neutral-700 dark:text-neutral-200 hover:bg-neutral-50 dark:hover:bg-neutral-700 transition whitespace-nowrap cursor-pointer shadow-2xs"
+            title="원시 JSON 데이터 확인 및 다운로드"
+          >
+            <Code2 className="w-3.5 h-3.5 text-neutral-500 shrink-0" />
+            <span className="hidden md:inline">&lt;/&gt; JSON</span>
+            <span className="md:hidden">&lt;/&gt;</span>
+          </button>
+
+          {/* 3. Primary: [⚡ 내 노션에 템플릿 생성하기] */}
           <button
             onClick={publishToNotion}
             disabled={isPublishing}
-            className="flex items-center space-x-1.5 px-3.5 py-1.5 rounded-lg font-semibold text-white bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 dark:from-emerald-500 dark:to-teal-500 dark:hover:from-emerald-600 dark:hover:to-teal-600 shadow-sm transition disabled:opacity-50"
+            className="flex items-center space-x-1.5 px-3 sm:px-3.5 py-1.5 rounded-xl font-bold text-white bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 dark:from-emerald-500 dark:to-teal-500 dark:hover:from-emerald-600 dark:hover:to-teal-600 shadow-sm transition disabled:opacity-50 whitespace-nowrap cursor-pointer shrink-0 active:scale-95"
             title="현재 설계된 템플릿을 내 노션 워크스페이스에 실제로 생성합니다"
           >
             {isPublishing ? (
               <>
-                <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                <Loader2 className="w-3.5 h-3.5 animate-spin shrink-0" />
                 <span>노션에 생성 중...</span>
               </>
             ) : (
               <>
-                <UploadCloud className="w-3.5 h-3.5" />
-                <span>내 노션에 템플릿 생성하기</span>
+                <Zap className="w-3.5 h-3.5 text-amber-300 shrink-0 fill-amber-300" />
+                <span className="hidden sm:inline">내 노션에 템플릿 생성하기</span>
+                <span className="sm:hidden">노션 생성</span>
               </>
             )}
-          </button>
-
-          <button
-            onClick={() => setIsRawJsonModalOpen(true)}
-            className="hidden sm:flex items-center space-x-1 px-2.5 py-1.5 rounded-md text-neutral-600 dark:text-neutral-300 hover:bg-neutral-100 dark:hover:bg-neutral-800 transition"
-          >
-            <Code2 className="w-3.5 h-3.5" />
-            <span>JSON</span>
-          </button>
-          <button
-            onClick={() => setIsExportModalOpen(true)}
-            className="hidden sm:flex items-center space-x-1 px-2.5 py-1.5 rounded-md text-neutral-600 dark:text-neutral-300 hover:bg-neutral-100 dark:hover:bg-neutral-800 transition"
-          >
-            <Share2 className="w-3.5 h-3.5" />
-            <span>공유</span>
           </button>
         </div>
       </div>

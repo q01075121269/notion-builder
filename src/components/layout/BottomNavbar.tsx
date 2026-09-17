@@ -56,7 +56,7 @@ export const BottomNavbar: React.FC = () => {
                   }`} />
                 )}
               </div>
-              <span className="text-[11px] leading-none tracking-tight">
+              <span className="text-[11px] leading-none tracking-tight whitespace-nowrap">
                 {tab.label}
               </span>
             </button>

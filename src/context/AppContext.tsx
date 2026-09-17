@@ -196,14 +196,47 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
   });
 
   // View Mode (v2.0 3대 독립 작업실 & 홈 대시보드)
-  const [currentView, setCurrentView] = useState<ViewType>(() => {
+  const [currentView, setCurrentViewState] = useState<ViewType>(() => {
     if (typeof window !== 'undefined') {
+      const path = window.location.pathname.replace(/\/+$/, '');
+      if (path === '/builder') return 'builder';
+      if (path === '/life') return 'life';
+      if (path === '/devlab') return 'devlab';
+      if (path === '/dashboard') return 'dashboard';
+      if (path === '/quick_capture') return 'quick_capture';
+
       const isDefaultQc = localStorage.getItem('default_view_quick_capture') === 'true';
       const isMobile = window.innerWidth < 768;
       if (isDefaultQc && isMobile) return 'quick_capture';
     }
     return 'home';
   });
+
+  const setCurrentView = (view: ViewType) => {
+    setCurrentViewState(view);
+    if (typeof window !== 'undefined') {
+      const targetPath = view === 'home' ? '/' : `/${view}`;
+      if (window.location.pathname !== targetPath) {
+        window.history.pushState({ view }, '', targetPath);
+      }
+    }
+  };
+
+  // 브라우저 뒤로가기/앞으로가기(popstate) 라우트 동기화
+  useEffect(() => {
+    const handlePopState = () => {
+      const path = window.location.pathname.replace(/\/+$/, '');
+      if (path === '/builder') setCurrentViewState('builder');
+      else if (path === '/life') setCurrentViewState('life');
+      else if (path === '/devlab') setCurrentViewState('devlab');
+      else if (path === '/dashboard') setCurrentViewState('dashboard');
+      else if (path === '/quick_capture') setCurrentViewState('quick_capture');
+      else setCurrentViewState('home');
+    };
+
+    window.addEventListener('popstate', handlePopState);
+    return () => window.removeEventListener('popstate', handlePopState);
+  }, []);
 
   // 4단계: Google Workspace & Notion Calendar Sync
   const [isGoogleSyncModalOpen, setIsGoogleSyncModalOpen] = useState<boolean>(false);

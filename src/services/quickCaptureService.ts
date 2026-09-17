@@ -109,13 +109,18 @@ const VISION_SYSTEM_PROMPT = `
  * 'models/gemini-1.5-flash' 처럼 접두사가 포함된 경우 'gemini-1.5-flash'로 정규화
  */
 export function normalizeGeminiModel(model?: string): string {
-  if (!model || typeof model !== 'string') return 'gemini-1.5-flash';
+  if (!model || typeof model !== 'string') return 'gemini-2.0-flash';
   const cleaned = model.replace(/^models\//, '').trim();
-  return cleaned || 'gemini-1.5-flash';
+  return cleaned || 'gemini-2.0-flash';
 }
 
-// 404 및 모델 미지원 대비 우선 순위별 대체 모델 목록
-const FALLBACK_MODELS = ['gemini-1.5-flash', 'gemini-1.5-flash-latest', 'gemini-2.0-flash'];
+// 2026년 기준 공식 권장 최신 모델 우선 배치 및 다단계 대체 모델 목록
+const FALLBACK_MODELS = [
+  'gemini-2.0-flash',
+  'gemini-2.5-flash',
+  'gemini-1.5-flash-latest',
+  'gemini-1.5-flash'
+];
 
 /**
  * 프록시 및 Google API 직접 호출, 그리고 모델 404 발생 시 안전한 다단계 Fallback 실행 엔진
@@ -126,7 +131,7 @@ async function callGeminiGenerateContentWithFallback(
   preferredModel?: string
 ): Promise<QuickCaptureAnalysisResult> {
   const normalizedPreferred = normalizeGeminiModel(preferredModel);
-  // 중복 없는 모델 후보 배열 생성 (사용자 선호 모델 -> gemini-1.5-flash -> gemini-1.5-flash-latest -> gemini-2.0-flash)
+  // 중복 없는 모델 후보 배열 생성 (사용자 선호 모델 -> 2.0-flash -> 2.5-flash -> 1.5-flash-latest -> 1.5-flash)
   const candidateModels = Array.from(
     new Set([normalizedPreferred, ...FALLBACK_MODELS])
   );
@@ -136,42 +141,76 @@ async function callGeminiGenerateContentWithFallback(
   for (let i = 0; i < candidateModels.length; i++) {
     const currentModel = candidateModels[i];
     try {
-      let res: Response;
+      let res: Response | null = null;
       let usedDirect = false;
 
-      // 1단계: /api/gemini 프록시 호출
+      // 1단계: /api/gemini 프록시 우선 호출
       try {
-        res = await fetch(`/api/gemini?model=${currentModel}`, {
+        const proxyRes = await fetch(`/api/gemini?model=${currentModel}`, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
-            'x-gemini-api-key': apiKey.trim()
+            'x-gemini-api-key': (apiKey || '').trim()
           },
           body: JSON.stringify(requestBody)
         });
 
-        // 프록시 자체가 없거나(404), 프록시가 구글 404를 반환한 경우
-        if (!res.ok && res.status === 404) {
-          throw new Error('404_PROXY_FALLBACK');
+        // 프록시 호출 성공 시
+        if (proxyRes.ok) {
+          res = proxyRes;
+        } else {
+          // 프록시가 응답을 반환했으나 404인 경우:
+          // 내용물이 JSON이고 'not found' 에러이면 구글 API의 404 응답이므로 다음 모델로 즉각 Fallback
+          const errBodyText = await proxyRes.text().catch(() => '');
+          const isModelNotFound =
+            proxyRes.status === 404 &&
+            (errBodyText.includes('not found') ||
+             errBodyText.includes('NOT_FOUND') ||
+             errBodyText.includes('is not found for API version'));
+
+          if (isModelNotFound && i < candidateModels.length - 1) {
+            console.warn(
+              `[QuickCapture] 프록시에서 모델 '${currentModel}' 404 NOT_FOUND 확인. 다음 대체 모델 '${candidateModels[i + 1]}'로 즉각 Fallback 합니다.`
+            );
+            continue;
+          }
+
+          // 프록시 라우트 미배포(정적 서빙 404 등)인 경우에만 다이렉트 호출 시도
+          throw new Error(`PROXY_FAILED_${proxyRes.status}_${errBodyText}`);
         }
-      } catch {
-        // 2단계: 프록시 미지원 환경 대비 Google Gemini API 직접 호출 (x-goog-api-key)
+      } catch (proxyErr: any) {
+        // 401 인증 실패는 모델 교체로 해결되지 않으므로 즉시 에러 발생
+        if (proxyErr.message?.includes('401') || proxyErr.message?.includes('API Key')) {
+          throw proxyErr;
+        }
+
+        // 2단계: 프록시 미지원 환경 대비 Google Gemini API 직접 호출 (URL에 ?key= 및 x-goog-api-key 동시 지원)
         usedDirect = true;
-        const directUrl = `https://generativelanguage.googleapis.com/v1beta/models/${currentModel}:generateContent`;
-        res = await fetch(directUrl, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'x-goog-api-key': apiKey.trim()
-          },
-          body: JSON.stringify(requestBody)
-        });
+        const directUrl = `https://generativelanguage.googleapis.com/v1beta/models/${currentModel}:generateContent?key=${apiKey.trim()}`;
+        try {
+          res = await fetch(directUrl, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'x-goog-api-key': apiKey.trim()
+            },
+            body: JSON.stringify(requestBody)
+          });
+        } catch (directNetErr: any) {
+          console.warn(`[QuickCapture] Direct API 네트워크 실패 (${currentModel}):`, directNetErr);
+          // 네트워크 실패/CORS 시 다음 모델로 전환
+          if (i < candidateModels.length - 1) {
+            continue;
+          }
+          throw directNetErr;
+        }
       }
 
-      if (!res.ok) {
-        const errText = await res.text().catch(() => '');
+      if (!res || !res.ok) {
+        const errText = res ? await res.text().catch(() => '') : '응답 없음';
+        const status = res ? res.status : 0;
         const isNotFound =
-          res.status === 404 ||
+          status === 404 ||
           errText.includes('not found') ||
           errText.includes('is not found for API version') ||
           errText.includes('NOT_FOUND');
@@ -179,13 +218,13 @@ async function callGeminiGenerateContentWithFallback(
         if (isNotFound && i < candidateModels.length - 1) {
           const nextModel = candidateModels[i + 1];
           console.warn(
-            `[QuickCapture] 모델 '${currentModel}' 404 NOT_FOUND 감지 (${usedDirect ? '직접호출' : '프록시'}). 대체 모델 '${nextModel}'로 자동 Fallback 전환합니다.`
+            `[QuickCapture] 모델 '${currentModel}' 404 미지원 (${usedDirect ? '직접호출' : '프록시'}). 대체 모델 '${nextModel}'로 Fallback 재시도합니다.`
           );
           lastError = new Error(`모델 '${currentModel}' 404 미지원: ${errText}`);
           continue;
         }
 
-        throw new Error(`Gemini AI 분석 실패 (${res.status}): ${errText || '네트워크 오류'}`);
+        throw new Error(`Gemini AI 분석 실패 (${status}): ${errText || '네트워크 오류'}`);
       }
 
       const data = await res.json();
@@ -202,21 +241,8 @@ async function callGeminiGenerateContentWithFallback(
       }
     } catch (err: any) {
       lastError = err;
-      const isNotFound =
-        err.message?.includes('404') ||
-        err.message?.includes('not found') ||
-        err.message?.includes('is not found for API version') ||
-        err.message?.includes('NOT_FOUND');
 
-      if (isNotFound && i < candidateModels.length - 1) {
-        const nextModel = candidateModels[i + 1];
-        console.warn(
-          `[QuickCapture] 모델 '${currentModel}' 에러 발생. 대체 모델 '${nextModel}'로 자동 Fallback 시도합니다.`
-        );
-        continue;
-      }
-
-      // API Key가 잘못되었거나 인증 거부(401, 403)인 경우 모델 문제가 아니므로 즉시 에러 발생
+      // API Key가 유효하지 않은 경우 즉시 에러 발생
       if (
         err.message?.includes('401') ||
         err.message?.includes('403') ||
@@ -224,6 +250,15 @@ async function callGeminiGenerateContentWithFallback(
         err.message?.includes('API Key')
       ) {
         throw err;
+      }
+
+      // 그 외의 어떤 오류(404, Failed to fetch 등)라도 다음 후보 모델이 남아 있다면 포기하지 않고 다음 모델 시도
+      if (i < candidateModels.length - 1) {
+        const nextModel = candidateModels[i + 1];
+        console.warn(
+          `[QuickCapture] 모델 '${currentModel}' 처리 중 오류(${err.message}). 다음 모델 '${nextModel}'로 자동 Fallback 시도합니다.`
+        );
+        continue;
       }
     }
   }

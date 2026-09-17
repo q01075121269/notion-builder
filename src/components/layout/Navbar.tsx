@@ -31,9 +31,9 @@ export const Navbar: React.FC = () => {
   const isConfigured = Boolean(notionApiKey && notionParentPageId && apiKey);
 
   const modelLabels: Record<GeminiModelType, { label: string; short: string }> = {
-    'gemini-1.5-flash': { label: 'Gemini 1.5 Flash', short: '1.5 Flash' },
-    'gemini-1.5-pro': { label: 'Gemini 1.5 Pro', short: '1.5 Pro' },
-    'gemini-2.0-flash': { label: 'Gemini 2.0 Flash', short: '2.0 Flash' }
+    'gemini-2.0-flash': { label: 'Gemini 2.0 Flash (권장)', short: '2.0 Flash' },
+    'gemini-1.5-flash': { label: 'Gemini 1.5 Flash (레거시)', short: '1.5 Flash' },
+    'gemini-1.5-pro': { label: 'Gemini 1.5 Pro', short: '1.5 Pro' }
   };
 
   return (
@@ -134,7 +134,7 @@ export const Navbar: React.FC = () => {
                     <div className="px-2.5 py-1 text-[10px] font-bold text-neutral-400 uppercase tracking-wider">
                       Gemini 모델 선택
                     </div>
-                    {(['gemini-1.5-flash', 'gemini-1.5-pro', 'gemini-2.0-flash'] as GeminiModelType[]).map((m) => (
+                    {(['gemini-2.0-flash', 'gemini-1.5-flash', 'gemini-1.5-pro'] as GeminiModelType[]).map((m) => (
                       <button
                         key={m}
                         onClick={() => {

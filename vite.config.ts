@@ -58,33 +58,64 @@ function geminiApiProxyPlugin(): Plugin {
           })
 
           req.on('end', () => {
-            const targetPath = `/v1beta/models/${model}:generateContent?key=${apiKey}`
-            const options = {
-              hostname: 'generativelanguage.googleapis.com',
-              port: 443,
-              path: targetPath,
-              method: 'POST',
-              headers: {
-                'Content-Type': 'application/json',
-                'Content-Length': Buffer.byteLength(bodyBuffer),
-              },
-            }
+            const candidateModels = Array.from(
+              new Set([model, 'gemini-2.0-flash', 'gemini-2.5-flash', 'gemini-1.5-flash-latest'])
+            );
 
-            const proxyReq = https.request(options, (proxyRes) => {
-              res.statusCode = proxyRes.statusCode || 200
-              res.setHeader('Content-Type', proxyRes.headers['content-type'] || 'application/json')
-              proxyRes.pipe(res)
-            })
+            const tryModel = (idx: number) => {
+              if (idx >= candidateModels.length) {
+                res.statusCode = 500;
+                res.setHeader('Content-Type', 'application/json');
+                res.end(JSON.stringify({ error: '모든 Gemini 모델 호출에 실패했습니다.' }));
+                return;
+              }
 
-            proxyReq.on('error', (err) => {
-              console.error('Gemini proxy error:', err)
-              res.statusCode = 502
-              res.setHeader('Content-Type', 'application/json')
-              res.end(JSON.stringify({ error: 'Gemini 서버 통신 실패: ' + err.message }))
-            })
+              const currentM = candidateModels[idx];
+              const targetPath = `/v1beta/models/${currentM}:generateContent?key=${apiKey}`;
+              const options = {
+                hostname: 'generativelanguage.googleapis.com',
+                port: 443,
+                path: targetPath,
+                method: 'POST',
+                headers: {
+                  'Content-Type': 'application/json',
+                  'Content-Length': Buffer.byteLength(bodyBuffer),
+                },
+              };
 
-            proxyReq.write(bodyBuffer)
-            proxyReq.end()
+              const proxyReq = https.request(options, (proxyRes) => {
+                let responseData = '';
+                proxyRes.on('data', (chunk) => {
+                  responseData += chunk;
+                });
+                proxyRes.on('end', () => {
+                  if (proxyRes.statusCode === 404 && idx < candidateModels.length - 1) {
+                    console.warn(`[Vite Gemini Proxy] Model '${currentM}' 404 감지. '${candidateModels[idx + 1]}'로 자동 전환합니다.`);
+                    tryModel(idx + 1);
+                    return;
+                  }
+                  res.statusCode = proxyRes.statusCode || 200;
+                  res.setHeader('Content-Type', proxyRes.headers['content-type'] || 'application/json');
+                  res.end(responseData);
+                });
+              });
+
+              proxyReq.on('error', (err) => {
+                console.error('Gemini proxy error:', err);
+                if (idx < candidateModels.length - 1) {
+                  tryModel(idx + 1);
+                } else {
+                  res.statusCode = 502;
+                  res.setHeader('Content-Type', 'application/json');
+                  res.end(JSON.stringify({ error: 'Gemini 서버 통신 실패: ' + err.message }));
+                }
+              });
+
+              proxyReq.write(bodyBuffer);
+              proxyReq.end();
+            };
+
+            tryModel(0);
           })
           return
         }

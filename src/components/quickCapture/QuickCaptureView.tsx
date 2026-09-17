@@ -31,7 +31,7 @@ import {
 import confetti from 'canvas-confetti';
 
 export const QuickCaptureView: React.FC = () => {
-  const { apiKey, notionApiKey, createdNotionResource, setIsNotionSettingsModalOpen } = useApp();
+  const { apiKey, selectedModel, notionApiKey, createdNotionResource, setIsNotionSettingsModalOpen } = useApp();
   const [activeMode, setActiveMode] = useState<CaptureMode>('voice');
   const [isProcessing, setIsProcessing] = useState(false);
   const [toastMessage, setToastMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
@@ -61,7 +61,7 @@ export const QuickCaptureView: React.FC = () => {
     setIsProcessing(true);
     try {
       // Gemini 멀티 인텐트 라우팅
-      const analysis = await analyzeAndRouteQuickText(rawText, apiKey);
+      const analysis = await analyzeAndRouteQuickText(rawText, apiKey, selectedModel);
       
       // 노션 워크스페이스로 즉시 전송
       const dispatchResult = await dispatchRoutedTasksToNotion(
@@ -103,7 +103,7 @@ export const QuickCaptureView: React.FC = () => {
   const handleProcessImage = async (base64DataUrl: string) => {
     setIsProcessing(true);
     try {
-      const analysis = await analyzeImageWithGeminiVision(base64DataUrl, apiKey);
+      const analysis = await analyzeImageWithGeminiVision(base64DataUrl, apiKey, selectedModel);
 
       const dispatchResult = await dispatchRoutedTasksToNotion(
         analysis.tasks,

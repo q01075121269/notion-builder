@@ -16,7 +16,8 @@ function geminiApiProxyPlugin(): Plugin {
       server.middlewares.use(async (req, res, next) => {
         if (req.url && req.url.startsWith('/api/gemini')) {
           const urlObj = new URL(req.url, 'http://localhost:5173')
-          const model = urlObj.searchParams.get('model') || 'gemini-1.5-flash'
+          const rawModel = urlObj.searchParams.get('model') || 'gemini-1.5-flash'
+          const model = rawModel.replace(/^models\//, '').trim() || 'gemini-1.5-flash'
           
           // 1. 보안 감사: 관리자 화이트리스트 기반 내부 API 호출 차단 검증
           const rawAdminEmails = env.VITE_ADMIN_EMAILS || env.VITE_ADMIN_EMAIL || process.env.VITE_ADMIN_EMAILS || process.env.VITE_ADMIN_EMAIL || ''

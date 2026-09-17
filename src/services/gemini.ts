@@ -144,7 +144,7 @@ export async function processConversationWithGemini(
     throw new Error('Gemini API 키가 설정되지 않았습니다. 상단 네비게이션의 🔑 [API 키 설정] 버튼을 눌러 키를 입력해 주세요.');
   }
 
-  const targetModel = model || 'gemini-1.5-flash';
+  const targetModel = (model || 'gemini-1.5-flash').replace(/^models\//, '').trim() || 'gemini-1.5-flash';
 
   // 1. 첨부 파일 분석 텍스트 블록 구성
   let filesContextBlock = '';
@@ -255,6 +255,26 @@ export async function processConversationWithGemini(
       },
       body: JSON.stringify(requestBody)
     });
+
+    if (!response.ok && response.status === 404) {
+      const fallbackModels = ['gemini-1.5-flash-latest', 'gemini-2.0-flash'];
+      for (const fbModel of fallbackModels) {
+        if (fbModel === targetModel) continue;
+        const fbUrl = `https://generativelanguage.googleapis.com/v1beta/models/${fbModel}:generateContent`;
+        const fbRes = await fetch(fbUrl, {
+          method: 'POST',
+          headers: { 
+            'Content-Type': 'application/json',
+            'x-goog-api-key': apiKey.trim()
+          },
+          body: JSON.stringify(requestBody)
+        });
+        if (fbRes.ok) {
+          response = fbRes;
+          break;
+        }
+      }
+    }
   }
 
   if (!response.ok) {

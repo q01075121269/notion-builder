@@ -202,7 +202,7 @@ export const generateGuideWithGemini = async (
 
 위 템플릿을 처음 쓰는 사람을 위한 쉬운 비주얼 가이드를 지침에 따라 JSON으로 만들어줘.`;
 
-  const targetModel = model || 'gemini-1.5-flash';
+  const targetModel = (model || 'gemini-1.5-flash').replace(/^models\//, '').trim() || 'gemini-1.5-flash';
   const requestPayload = {
     contents: [{ parts: [{ text: prompt }] }],
     systemInstruction: {

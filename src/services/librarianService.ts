@@ -191,24 +191,63 @@ ${fullContext || '검색된 문서가 비어 있습니다.'}
 위 컨텍스트에서 질문에 해당하는 구체적인 사실을 찾아 명확하게 답변해 주세요.
 `;
 
-  const res = await fetch('/api/gemini?model=gemini-1.5-flash', {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'x-gemini-api-key': apiKey || ''
-    },
-    body: JSON.stringify({
-      contents: [{ role: 'user', parts: [{ text: userPrompt }] }],
-      systemInstruction: { parts: [{ text: LIBRARIAN_SYSTEM_PROMPT }] },
-      generationConfig: { temperature: 0.2 }
-    })
-  });
+  const models = ['gemini-1.5-flash', 'gemini-1.5-flash-latest', 'gemini-2.0-flash'];
+  let data: any = null;
+  let lastErr: any = null;
 
-  if (!res.ok) {
-    throw new Error('Gemini API 응답 실패: 사서 답변을 생성하지 못했습니다.');
+  for (const model of models) {
+    try {
+      let res: Response;
+      try {
+        res = await fetch(`/api/gemini?model=${model}`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'x-gemini-api-key': apiKey || ''
+          },
+          body: JSON.stringify({
+            contents: [{ role: 'user', parts: [{ text: userPrompt }] }],
+            systemInstruction: { parts: [{ text: LIBRARIAN_SYSTEM_PROMPT }] },
+            generationConfig: { temperature: 0.2 }
+          })
+        });
+        if (!res.ok && res.status === 404) {
+          throw new Error('404_PROXY_FALLBACK');
+        }
+      } catch {
+        const directUrl = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`;
+        res = await fetch(directUrl, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'x-goog-api-key': (apiKey || '').trim()
+          },
+          body: JSON.stringify({
+            contents: [{ role: 'user', parts: [{ text: userPrompt }] }],
+            systemInstruction: { parts: [{ text: LIBRARIAN_SYSTEM_PROMPT }] },
+            generationConfig: { temperature: 0.2 }
+          })
+        });
+      }
+
+      if (!res.ok) {
+        if (res.status === 404) continue;
+        const errText = await res.text().catch(() => '');
+        throw new Error(`Gemini API 응답 실패 (${res.status}): ${errText}`);
+      }
+
+      data = await res.json();
+      break;
+    } catch (e: any) {
+      lastErr = e;
+      if (e.message?.includes('404') || e.message?.includes('not found')) continue;
+      if (e.message?.includes('401') || e.message?.includes('403')) throw e;
+    }
   }
 
-  const data = await res.json();
+  if (!data) {
+    throw lastErr || new Error('Gemini API 응답 실패: 사서 답변을 생성하지 못했습니다.');
+  }
   const answer = data.candidates?.[0]?.content?.parts?.[0]?.text || '답변을 생성할 수 없습니다.';
 
   // 가상 참조 링크 fallback (노션 연결 전일 때)
@@ -359,27 +398,69 @@ export async function generateSettlementReportWithGemini(
 ): Promise<SettlementReport> {
   const prompt = `다음 워크스페이스 통계 데이터를 분석하고 인사이트 브리핑 JSON을 작성하세요:\n${JSON.stringify(stats, null, 2)}`;
 
-  const res = await fetch('/api/gemini?model=gemini-1.5-flash', {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'x-gemini-api-key': apiKey || ''
-    },
-    body: JSON.stringify({
-      contents: [{ role: 'user', parts: [{ text: prompt }] }],
-      systemInstruction: { parts: [{ text: SETTLEMENT_SYSTEM_PROMPT }] },
-      generationConfig: {
-        temperature: 0.3,
-        responseMimeType: 'application/json'
-      }
-    })
-  });
+  const models = ['gemini-1.5-flash', 'gemini-1.5-flash-latest', 'gemini-2.0-flash'];
+  let data: any = null;
+  let lastErr: any = null;
 
-  if (!res.ok) {
-    throw new Error('결산 리포트 AI 생성 실패');
+  for (const model of models) {
+    try {
+      let res: Response;
+      try {
+        res = await fetch(`/api/gemini?model=${model}`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'x-gemini-api-key': apiKey || ''
+          },
+          body: JSON.stringify({
+            contents: [{ role: 'user', parts: [{ text: prompt }] }],
+            systemInstruction: { parts: [{ text: SETTLEMENT_SYSTEM_PROMPT }] },
+            generationConfig: {
+              temperature: 0.3,
+              responseMimeType: 'application/json'
+            }
+          })
+        });
+        if (!res.ok && res.status === 404) {
+          throw new Error('404_PROXY_FALLBACK');
+        }
+      } catch {
+        const directUrl = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`;
+        res = await fetch(directUrl, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'x-goog-api-key': (apiKey || '').trim()
+          },
+          body: JSON.stringify({
+            contents: [{ role: 'user', parts: [{ text: prompt }] }],
+            systemInstruction: { parts: [{ text: SETTLEMENT_SYSTEM_PROMPT }] },
+            generationConfig: {
+              temperature: 0.3,
+              responseMimeType: 'application/json'
+            }
+          })
+        });
+      }
+
+      if (!res.ok) {
+        if (res.status === 404) continue;
+        const errText = await res.text().catch(() => '');
+        throw new Error(`Gemini 결산 리포트 생성 실패 (${res.status}): ${errText}`);
+      }
+
+      data = await res.json();
+      break;
+    } catch (e: any) {
+      lastErr = e;
+      if (e.message?.includes('404') || e.message?.includes('not found')) continue;
+      if (e.message?.includes('401') || e.message?.includes('403')) throw e;
+    }
   }
 
-  const data = await res.json();
+  if (!data) {
+    throw lastErr || new Error('결산 리포트 AI 생성 실패');
+  }
   const rawJson = data.candidates?.[0]?.content?.parts?.[0]?.text;
   let parsed: any;
   try {

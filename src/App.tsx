@@ -1,7 +1,6 @@
 import React from 'react';
 import { AppProvider, useApp } from './context/AppContext';
 import { Navbar } from './components/layout/Navbar';
-import { SplitLayout } from './components/layout/SplitLayout';
 import { DashboardView } from './components/dashboard/DashboardView';
 import { ApiKeyModal } from './components/modals/ApiKeyModal';
 import { RawJsonModal } from './components/modals/RawJsonModal';
@@ -18,6 +17,11 @@ import { QuickCaptureView } from './components/quickCapture/QuickCaptureView';
 import { BottomNavbar } from './components/layout/BottomNavbar';
 import { ErrorBoundary } from './components/common/ErrorBoundary';
 import { Toast } from './components/common/Toast';
+
+import HomePage from './app/page';
+import BuilderPage from './app/builder/page';
+import LifePage from './app/life/page';
+import DevLabPage from './app/devlab/page';
 
 export const MainApp: React.FC = () => {
   const { 
@@ -53,14 +57,22 @@ export const MainApp: React.FC = () => {
       <div className="flex flex-col h-screen w-screen overflow-hidden bg-white dark:bg-notion-dark-bg text-notion-light-text dark:text-notion-dark-text font-sans">
         <Navbar />
         
-        {/* 뷰 모드 분기: 빌더 화면 vs 대시보드(내 보관함) vs 모바일 1초 퀵 캡처 */}
+        {/* 뷰 모드 분기: 홈 대시보드 vs 템플릿 빌더(격리 보존) vs 라이프 허브 vs 개발 랩 vs 내 보관함 vs 1초 퀵 캡처 */}
         <main className="flex-1 flex flex-col overflow-hidden pb-14 md:pb-0">
-          {currentView === 'dashboard' ? (
+          {currentView === 'home' ? (
+            <HomePage />
+          ) : currentView === 'builder' ? (
+            <BuilderPage />
+          ) : currentView === 'life' ? (
+            <LifePage />
+          ) : currentView === 'devlab' ? (
+            <DevLabPage />
+          ) : currentView === 'dashboard' ? (
             <DashboardView />
           ) : currentView === 'quick_capture' ? (
             <QuickCaptureView />
           ) : (
-            <SplitLayout />
+            <HomePage />
           )}
         </main>
         

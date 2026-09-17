@@ -19,6 +19,8 @@ import { getAuthSession, saveAuthSession, clearAllAuthAndCredentials, isUserAdmi
 import { getSavedChatMessages, saveChatMessages, clearSavedChatMessages, INITIAL_CHAT_MESSAGES } from '../services/chatStorage';
 import confetti from 'canvas-confetti';
 
+export type ViewType = 'home' | 'builder' | 'life' | 'devlab' | 'dashboard' | 'quick_capture';
+
 interface AppContextType {
   // 6단계 보안 및 인증 (Google OAuth & RBAC)
   authUser: AuthUser | null;
@@ -27,7 +29,7 @@ interface AppContextType {
   login: (user: AuthUser) => void;
   logout: () => void;
 
-  // Theme & Model
+  // Theme
   isDark: boolean;
   toggleDarkMode: () => void;
   selectedModel: GeminiModelType;
@@ -35,9 +37,9 @@ interface AppContextType {
   apiKey: string;
   setApiKey: (key: string) => void;
 
-  // View Mode (4단계 보관함 vs 확장 2단계 퀵 캡처 허브)
-  currentView: 'builder' | 'dashboard' | 'quick_capture';
-  setCurrentView: (view: 'builder' | 'dashboard' | 'quick_capture') => void;
+  // View Mode (v2.0 3대 독립 작업실 & 홈 대시보드)
+  currentView: ViewType;
+  setCurrentView: (view: ViewType) => void;
 
   // 5단계: 초보자 맞춤형 비주얼 가이드
   currentGuide: BeginnerGuide | null;
@@ -193,14 +195,14 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     timestamp: 0
   });
 
-  // View Mode (빌더 vs 대시보드 vs 퀵 캡처 허브)
-  const [currentView, setCurrentView] = useState<'builder' | 'dashboard' | 'quick_capture'>(() => {
+  // View Mode (v2.0 3대 독립 작업실 & 홈 대시보드)
+  const [currentView, setCurrentView] = useState<ViewType>(() => {
     if (typeof window !== 'undefined') {
       const isDefaultQc = localStorage.getItem('default_view_quick_capture') === 'true';
       const isMobile = window.innerWidth < 768;
       if (isDefaultQc && isMobile) return 'quick_capture';
     }
-    return 'builder';
+    return 'home';
   });
 
   // 4단계: Google Workspace & Notion Calendar Sync

@@ -1,7 +1,10 @@
 import React, { useState } from 'react';
 import { useApp } from '../../context/AppContext';
 import { 
+  Home,
   Sparkles, 
+  Leaf,
+  Terminal,
   Layers, 
   Zap, 
   Settings, 
@@ -65,53 +68,95 @@ export const Navbar: React.FC = () => {
             </div>
           </div>
 
-          {/* [중앙]: [템플릿 빌더 | 내 보관함 | 1초 퀵 캡처] 3개 탭 세그먼트 버튼 */}
+          {/* [중앙]: [홈 | ✨ 노션 빌더 | 🌿 라이프 허브 | 💻 개발 랩] 4대 통합 내비게이션 바 */}
           <div className="flex items-center bg-neutral-100/90 dark:bg-neutral-800/80 p-1 rounded-xl border border-neutral-200/70 dark:border-neutral-700/60 shrink-0">
-            {/* 1. 템플릿 빌더 */}
+            {/* 1. 홈 */}
             <button
-              onClick={() => setCurrentView('builder')}
-              className={`flex items-center space-x-1.5 px-2.5 sm:px-3 py-1.5 text-xs font-semibold rounded-lg transition whitespace-nowrap cursor-pointer ${
-                currentView === 'builder'
+              onClick={() => setCurrentView('home')}
+              className={`flex items-center space-x-1.5 px-2 sm:px-2.5 py-1.5 text-xs font-semibold rounded-lg transition whitespace-nowrap cursor-pointer ${
+                currentView === 'home'
                   ? 'bg-white dark:bg-notion-dark-card text-neutral-900 dark:text-white shadow-xs'
                   : 'text-neutral-500 hover:text-neutral-900 dark:text-neutral-400 dark:hover:text-white'
               }`}
+              title="메인 홈 대시보드"
+            >
+              <Home className="w-3.5 h-3.5 text-neutral-600 dark:text-neutral-300 shrink-0" />
+              <span>홈</span>
+            </button>
+
+            {/* 2. ✨ 노션 빌더 */}
+            <button
+              onClick={() => setCurrentView('builder')}
+              className={`flex items-center space-x-1.5 px-2 sm:px-2.5 py-1.5 text-xs font-semibold rounded-lg transition whitespace-nowrap cursor-pointer ${
+                currentView === 'builder'
+                  ? 'bg-white dark:bg-notion-dark-card text-amber-600 dark:text-amber-400 font-bold shadow-xs'
+                  : 'text-neutral-500 hover:text-neutral-900 dark:text-neutral-400 dark:hover:text-white'
+              }`}
+              title="노션 템플릿 빌더 (v1 격리 보존)"
             >
               <Sparkles className="w-3.5 h-3.5 text-amber-500 shrink-0" />
-              <span className="hidden sm:inline">템플릿 빌더</span>
+              <span className="hidden sm:inline">노션 빌더</span>
               <span className="sm:hidden">빌더</span>
             </button>
 
-            {/* 2. 내 보관함 */}
+            {/* 3. 🌿 라이프 허브 */}
             <button
-              onClick={() => setCurrentView('dashboard')}
-              className={`flex items-center space-x-1.5 px-2.5 sm:px-3 py-1.5 text-xs font-semibold rounded-lg transition whitespace-nowrap cursor-pointer ${
-                currentView === 'dashboard'
-                  ? 'bg-white dark:bg-notion-dark-card text-neutral-900 dark:text-white shadow-xs'
+              onClick={() => setCurrentView('life')}
+              className={`flex items-center space-x-1.5 px-2 sm:px-2.5 py-1.5 text-xs font-semibold rounded-lg transition whitespace-nowrap cursor-pointer ${
+                currentView === 'life'
+                  ? 'bg-white dark:bg-notion-dark-card text-emerald-600 dark:text-emerald-400 font-bold shadow-xs'
                   : 'text-neutral-500 hover:text-neutral-900 dark:text-neutral-400 dark:hover:text-white'
               }`}
+              title="라이프 허브 (일정, 메일, 가계부, 할 일)"
             >
-              <Layers className="w-3.5 h-3.5 text-blue-500 shrink-0" />
-              <span className="hidden sm:inline">내 보관함</span>
-              <span className="sm:hidden">보관함</span>
+              <Leaf className="w-3.5 h-3.5 text-emerald-500 shrink-0" />
+              <span className="hidden sm:inline">라이프 허브</span>
+              <span className="sm:hidden">라이프</span>
             </button>
 
-            {/* 3. 1초 퀵 캡처 */}
+            {/* 4. 💻 개발 랩 */}
             <button
-              onClick={() => setCurrentView('quick_capture')}
-              className={`flex items-center space-x-1.5 px-2.5 sm:px-3 py-1.5 text-xs font-semibold rounded-lg transition whitespace-nowrap cursor-pointer ${
-                currentView === 'quick_capture'
-                  ? 'bg-white dark:bg-notion-dark-card text-rose-600 dark:text-rose-400 shadow-xs'
+              onClick={() => setCurrentView('devlab')}
+              className={`flex items-center space-x-1.5 px-2 sm:px-2.5 py-1.5 text-xs font-semibold rounded-lg transition whitespace-nowrap cursor-pointer ${
+                currentView === 'devlab'
+                  ? 'bg-white dark:bg-notion-dark-card text-blue-600 dark:text-blue-400 font-bold shadow-xs'
                   : 'text-neutral-500 hover:text-neutral-900 dark:text-neutral-400 dark:hover:text-white'
               }`}
+              title="개발 랩 (기획, 트러블슈팅, 프롬프트)"
             >
-              <Zap className="w-3.5 h-3.5 text-rose-500 shrink-0" />
-              <span className="hidden sm:inline">1초 퀵 캡처</span>
-              <span className="sm:hidden">퀵캡처</span>
+              <Terminal className="w-3.5 h-3.5 text-blue-500 shrink-0" />
+              <span className="hidden sm:inline">개발 랩</span>
+              <span className="sm:hidden">개발랩</span>
             </button>
           </div>
 
-          {/* [우측]: Gemini 모델 셀렉터, [⚙️ 설정] 버튼, 프로필 아바타 */}
-          <div className="flex items-center space-x-1 sm:space-x-2 shrink-0">
+          {/* [우측]: 퀵 캡처, 보관함, Gemini 모델 셀렉터, [⚙️ 설정] 버튼, 프로필 아바타 */}
+          <div className="flex items-center space-x-1 sm:space-x-1.5 shrink-0">
+            {/* 1초 퀵 캡처 숏컷 */}
+            <button
+              onClick={() => setCurrentView('quick_capture')}
+              className={`p-1.5 rounded-xl border transition cursor-pointer shrink-0 ${
+                currentView === 'quick_capture'
+                  ? 'bg-rose-50 dark:bg-rose-950/40 border-rose-300 text-rose-600 dark:text-rose-400 shadow-xs'
+                  : 'border-neutral-200 dark:border-neutral-700 hover:bg-neutral-100 dark:hover:bg-neutral-800 text-neutral-600 dark:text-neutral-300'
+              }`}
+              title="1초 퀵 캡처"
+            >
+              <Zap className="w-4 h-4 text-rose-500" />
+            </button>
+
+            {/* 보관함 숏컷 */}
+            <button
+              onClick={() => setCurrentView('dashboard')}
+              className={`p-1.5 rounded-xl border transition cursor-pointer shrink-0 ${
+                currentView === 'dashboard'
+                  ? 'bg-blue-50 dark:bg-blue-950/40 border-blue-300 text-blue-600 dark:text-blue-400 shadow-xs'
+                  : 'border-neutral-200 dark:border-neutral-700 hover:bg-neutral-100 dark:hover:bg-neutral-800 text-neutral-600 dark:text-neutral-300'
+              }`}
+              title="내 보관함"
+            >
+              <Layers className="w-4 h-4 text-blue-500" />
+            </button>
             
             {/* 1. Gemini 모델 셀렉터 (Google AI Studio 스타일의 라운드 드롭다운) */}
             <div className="relative">

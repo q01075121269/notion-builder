@@ -2,6 +2,14 @@ import type { NotionTemplate } from './notion';
 
 export type ArchiveCategoryType = 'templates' | 'prompts' | 'inspiration';
 
+export interface TemplateFolder {
+  id: string;
+  name: string;
+  color?: string;
+  createdAt: number;
+  updatedAt: number;
+}
+
 export interface ArchivedTemplate {
   id: string;
   title: string;
@@ -11,6 +19,7 @@ export interface ArchivedTemplate {
   tags: string[];
   templateData: NotionTemplate;
   notionUrl?: string;
+  folderId?: string | null;
   createdAt: number;
   updatedAt: number;
 }

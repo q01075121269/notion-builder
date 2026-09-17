@@ -1,5 +1,6 @@
 import type { 
   ArchivedTemplate, 
+  TemplateFolder,
   PromptSnippet, 
   InspirationItem, 
   GoogleSyncConfig 
@@ -8,6 +9,7 @@ import { PRESET_TEMPLATES } from './presetTemplates';
 
 const STORAGE_KEYS = {
   TEMPLATES: 'notion_archived_templates',
+  FOLDERS: 'notion_template_folders',
   PROMPTS: 'notion_prompt_snippets',
   INSPIRATION: 'notion_inspiration_items',
   GOOGLE_SYNC: 'notion_google_sync_config'
@@ -511,3 +513,85 @@ export const importArchiveData = (jsonString: string): boolean => {
     return false;
   }
 };
+
+// ==========================================
+// 5. 템플릿 스마트 폴더링 (DnD Grouping) 스토리지
+// ==========================================
+
+export const getTemplateFolders = (): TemplateFolder[] => {
+  if (typeof window === 'undefined') return [];
+  const stored = localStorage.getItem(STORAGE_KEYS.FOLDERS);
+  if (!stored) return [];
+  try {
+    const parsed = JSON.parse(stored);
+    return Array.isArray(parsed) ? parsed : [];
+  } catch (e) {
+    console.error('Failed to parse folders:', e);
+    return [];
+  }
+};
+
+export const saveTemplateFolder = (folder: TemplateFolder): void => {
+  const folders = getTemplateFolders();
+  const existingIdx = folders.findIndex(f => f.id === folder.id);
+  if (existingIdx >= 0) {
+    folders[existingIdx] = { ...folders[existingIdx], ...folder, updatedAt: Date.now() };
+  } else {
+    folders.push(folder);
+  }
+  localStorage.setItem(STORAGE_KEYS.FOLDERS, JSON.stringify(folders));
+};
+
+export const deleteTemplateFolder = (folderId: string): void => {
+  const folders = getTemplateFolders().filter(f => f.id !== folderId);
+  localStorage.setItem(STORAGE_KEYS.FOLDERS, JSON.stringify(folders));
+
+  // 해당 폴더 안의 템플릿들은 루트(folderId: null)로 복귀
+  const templates = getArchivedTemplates();
+  let modified = false;
+  const updatedTemplates = templates.map(t => {
+    if (t.folderId === folderId) {
+      modified = true;
+      return { ...t, folderId: null };
+    }
+    return t;
+  });
+  if (modified) {
+    localStorage.setItem(STORAGE_KEYS.TEMPLATES, JSON.stringify(updatedTemplates));
+  }
+};
+
+export const moveTemplateToFolder = (templateId: string, folderId: string | null): void => {
+  const templates = getArchivedTemplates();
+  const updated = templates.map(t => {
+    if (t.id === templateId) {
+      return { ...t, folderId: folderId, updatedAt: Date.now() };
+    }
+    return t;
+  });
+  localStorage.setItem(STORAGE_KEYS.TEMPLATES, JSON.stringify(updated));
+};
+
+export const createFolderWithTemplates = (folderName: string, templateIds: string[]): TemplateFolder => {
+  const newFolder: TemplateFolder = {
+    id: `folder-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`,
+    name: folderName.trim() || '새 컬렉션 폴더',
+    createdAt: Date.now(),
+    updatedAt: Date.now()
+  };
+
+  saveTemplateFolder(newFolder);
+
+  // 선택된 템플릿들의 folderId를 새 폴더로 업데이트
+  const templates = getArchivedTemplates();
+  const updated = templates.map(t => {
+    if (templateIds.includes(t.id)) {
+      return { ...t, folderId: newFolder.id, updatedAt: Date.now() };
+    }
+    return t;
+  });
+  localStorage.setItem(STORAGE_KEYS.TEMPLATES, JSON.stringify(updated));
+
+  return newFolder;
+};
+

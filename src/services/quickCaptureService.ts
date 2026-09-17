@@ -131,14 +131,32 @@ export async function analyzeAndRouteQuickText(
     }
   };
 
-  const res = await fetch('/api/gemini?model=gemini-1.5-flash', {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'x-gemini-api-key': apiKey || ''
-    },
-    body: JSON.stringify(requestBody)
-  });
+  let res: Response;
+  try {
+    res = await fetch('/api/gemini?model=gemini-1.5-flash', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-gemini-api-key': apiKey || ''
+      },
+      body: JSON.stringify(requestBody)
+    });
+
+    if (!res.ok && res.status === 404) {
+      throw new Error('404_FALLBACK');
+    }
+  } catch {
+    // Vercel 등 프록시 404 시 Google Gemini API 직접 호출 폴백
+    const directUrl = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent';
+    res = await fetch(directUrl, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-goog-api-key': apiKey.trim()
+      },
+      body: JSON.stringify(requestBody)
+    });
+  }
 
   if (!res.ok) {
     const errText = await res.text().catch(() => '');
@@ -196,14 +214,31 @@ export async function analyzeImageWithGeminiVision(
     }
   };
 
-  const res = await fetch('/api/gemini?model=gemini-1.5-flash', {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'x-gemini-api-key': apiKey || ''
-    },
-    body: JSON.stringify(requestBody)
-  });
+  let res: Response;
+  try {
+    res = await fetch('/api/gemini?model=gemini-1.5-flash', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-gemini-api-key': apiKey || ''
+      },
+      body: JSON.stringify(requestBody)
+    });
+
+    if (!res.ok && res.status === 404) {
+      throw new Error('404_FALLBACK');
+    }
+  } catch {
+    const directUrl = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent';
+    res = await fetch(directUrl, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-goog-api-key': apiKey.trim()
+      },
+      body: JSON.stringify(requestBody)
+    });
+  }
 
   if (!res.ok) {
     const errText = await res.text().catch(() => '');

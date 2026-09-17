@@ -15,6 +15,7 @@ import { MobileFab } from './components/common/MobileFab';
 import { LoginView } from './components/auth/LoginView';
 import { UnauthorizedView } from './components/auth/UnauthorizedView';
 import { QuickCaptureView } from './components/quickCapture/QuickCaptureView';
+import { BottomNavbar } from './components/layout/BottomNavbar';
 
 export const MainApp: React.FC = () => {
   const { 
@@ -48,14 +49,19 @@ export const MainApp: React.FC = () => {
       <Navbar />
       
       {/* 뷰 모드 분기: 빌더 화면 vs 대시보드(내 보관함) vs 모바일 1초 퀵 캡처 */}
-      {currentView === 'dashboard' ? (
-        <DashboardView />
-      ) : currentView === 'quick_capture' ? (
-        <QuickCaptureView />
-      ) : (
-        <SplitLayout />
-      )}
+      <main className="flex-1 flex flex-col overflow-hidden pb-14 md:pb-0">
+        {currentView === 'dashboard' ? (
+          <DashboardView />
+        ) : currentView === 'quick_capture' ? (
+          <QuickCaptureView />
+        ) : (
+          <SplitLayout />
+        )}
+      </main>
       
+      {/* 모바일 하단 탭바 (빌더 / 보관함 / 퀵캡처) */}
+      <BottomNavbar />
+
       {/* Mobile Floating Action Button (모바일에서 언제든 새 템플릿 작성으로 복귀) */}
       <MobileFab />
 

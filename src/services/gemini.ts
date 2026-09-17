@@ -241,6 +241,9 @@ export async function processConversationWithGemini(
       },
       body: JSON.stringify(requestBody)
     });
+    if (!response.ok && response.status === 404) {
+      throw new Error('404_FALLBACK');
+    }
   } catch {
     // 프록시 미지원 환경 대비 직접 호출 폴백 (URL에 키 노출 없이 x-goog-api-key 헤더 방식 사용)
     const directUrl = `https://generativelanguage.googleapis.com/v1beta/models/${targetModel}:generateContent`;

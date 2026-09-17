@@ -14,7 +14,7 @@ export const MobileFab: React.FC = () => {
   };
 
   return (
-    <div className="fixed bottom-6 right-5 z-40 md:hidden animate-bounce-short">
+    <div className="fixed bottom-20 right-4 z-40 md:hidden animate-bounce-short">
       <button
         onClick={handleClick}
         className="flex items-center space-x-2 px-4 py-3 rounded-full bg-gradient-to-r from-neutral-900 to-neutral-800 dark:from-white dark:to-neutral-200 text-white dark:text-neutral-900 font-bold text-xs shadow-2xl hover:scale-105 active:scale-95 transition-all border border-neutral-700/20 dark:border-white/40"

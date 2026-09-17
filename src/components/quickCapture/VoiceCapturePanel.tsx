@@ -35,23 +35,27 @@ export const VoiceCapturePanel: React.FC<VoiceCapturePanelProps> = ({
       let finalStr = '';
       let interimStr = '';
 
-      for (let i = event.resultIndex; i < event.results.length; ++i) {
-        if (event.results[i].isFinal) {
-          finalStr += event.results[i][0].transcript;
+      // event.results 전체를 0부터 순회하여 확정된 텍스트와 임시 텍스트를 명확히 분리
+      for (let i = 0; i < event.results.length; ++i) {
+        const result = event.results[i];
+        if (result.isFinal) {
+          finalStr += result[0].transcript + ' ';
         } else {
-          interimStr += event.results[i][0].transcript;
+          interimStr += result[0].transcript;
         }
       }
 
+      // 이전 상태 누적(prev + finalStr) 대신 확정된 전체 문장 스냅샷을 직접 설정하여 중복 완벽 차단
       if (finalStr) {
-        setTranscript(prev => (prev ? `${prev} ${finalStr}` : finalStr));
+        setTranscript(finalStr.trim());
       }
-      setInterimTranscript(interimStr);
+      setInterimTranscript(interimStr.trim());
     };
 
     recognition.onerror = (event: any) => {
       console.warn('Speech recognition error:', event.error);
       setIsRecording(false);
+      setInterimTranscript('');
       if (event.error === 'not-allowed' || event.error === 'service-not-allowed') {
         setPermissionDenied(true);
       }
@@ -59,7 +63,13 @@ export const VoiceCapturePanel: React.FC<VoiceCapturePanelProps> = ({
 
     recognition.onend = () => {
       setIsRecording(false);
-      setInterimTranscript('');
+      // 종료 시 임시 텍스트가 남아있으면 확정 텍스트로 안전하게 1회 병합 후 클리어
+      setInterimTranscript(currentInterim => {
+        if (currentInterim) {
+          setTranscript(prev => (prev ? `${prev} ${currentInterim}`.trim() : currentInterim));
+        }
+        return '';
+      });
     };
 
     recognitionRef.current = recognition;
@@ -94,9 +104,11 @@ export const VoiceCapturePanel: React.FC<VoiceCapturePanelProps> = ({
   };
 
   const handleSend = () => {
-    const textToSend = (transcript + ' ' + interimTranscript).trim();
+    const textToSend = transcript.trim() || interimTranscript.trim();
     if (!textToSend || isProcessing) return;
     onSendTranscript(textToSend);
+    setTranscript('');
+    setInterimTranscript('');
   };
 
   return (

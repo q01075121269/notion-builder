@@ -16,6 +16,8 @@ import { LoginView } from './components/auth/LoginView';
 import { UnauthorizedView } from './components/auth/UnauthorizedView';
 import { QuickCaptureView } from './components/quickCapture/QuickCaptureView';
 import { BottomNavbar } from './components/layout/BottomNavbar';
+import { ErrorBoundary } from './components/common/ErrorBoundary';
+import { Toast } from './components/common/Toast';
 
 export const MainApp: React.FC = () => {
   const { 
@@ -24,7 +26,9 @@ export const MainApp: React.FC = () => {
     isAuthenticated,
     isAdmin,
     login,
-    logout
+    logout,
+    toast,
+    hideToast
   } = useApp();
 
   // 1. 미인증 상태 -> Google OAuth 로그인 화면 (Auth Gate)
@@ -45,43 +49,50 @@ export const MainApp: React.FC = () => {
 
   // 3. 관리자 권한 인가 완료 -> 정상 빌더 & 대시보드 애플리케이션 진입
   return (
-    <div className="flex flex-col h-screen w-screen overflow-hidden bg-white dark:bg-notion-dark-bg text-notion-light-text dark:text-notion-dark-text font-sans">
-      <Navbar />
-      
-      {/* 뷰 모드 분기: 빌더 화면 vs 대시보드(내 보관함) vs 모바일 1초 퀵 캡처 */}
-      <main className="flex-1 flex flex-col overflow-hidden pb-14 md:pb-0">
-        {currentView === 'dashboard' ? (
-          <DashboardView />
-        ) : currentView === 'quick_capture' ? (
-          <QuickCaptureView />
-        ) : (
-          <SplitLayout />
-        )}
-      </main>
-      
-      {/* 모바일 하단 탭바 (빌더 / 보관함 / 퀵캡처) */}
-      <BottomNavbar />
+    <ErrorBoundary fallbackTitle="앱 화면 로드 중 예기치 않은 오류가 발생했습니다.">
+      <div className="flex flex-col h-screen w-screen overflow-hidden bg-white dark:bg-notion-dark-bg text-notion-light-text dark:text-notion-dark-text font-sans">
+        <Navbar />
+        
+        {/* 뷰 모드 분기: 빌더 화면 vs 대시보드(내 보관함) vs 모바일 1초 퀵 캡처 */}
+        <main className="flex-1 flex flex-col overflow-hidden pb-14 md:pb-0">
+          {currentView === 'dashboard' ? (
+            <DashboardView />
+          ) : currentView === 'quick_capture' ? (
+            <QuickCaptureView />
+          ) : (
+            <SplitLayout />
+          )}
+        </main>
+        
+        {/* 모바일 하단 탭바 (빌더 / 보관함 / 퀵캡처) */}
+        <BottomNavbar />
 
-      {/* Mobile Floating Action Button (모바일에서 언제든 새 템플릿 작성으로 복귀) */}
-      <MobileFab />
+        {/* Mobile Floating Action Button (모바일에서 언제든 새 템플릿 작성으로 복귀) */}
+        <MobileFab />
 
-      {/* Modals */}
-      <ApiKeyModal />
-      <NotionSettingsModal />
-      <GoogleSyncModal />
-      <GuideModal />
-      <PublishProgressModal />
-      <PublishSuccessModal />
-      <RawJsonModal />
-      <ExportModal />
-    </div>
+        {/* Global Floating Toast Alerts */}
+        <Toast toast={toast} onClose={hideToast} />
+
+        {/* Modals */}
+        <ApiKeyModal />
+        <NotionSettingsModal />
+        <GoogleSyncModal />
+        <GuideModal />
+        <PublishProgressModal />
+        <PublishSuccessModal />
+        <RawJsonModal />
+        <ExportModal />
+      </div>
+    </ErrorBoundary>
   );
 };
 
 export default function App() {
   return (
-    <AppProvider>
-      <MainApp />
-    </AppProvider>
+    <ErrorBoundary fallbackTitle="애플리케이션 초기화 중 오류가 발생했습니다.">
+      <AppProvider>
+        <MainApp />
+      </AppProvider>
+    </ErrorBoundary>
   );
 }

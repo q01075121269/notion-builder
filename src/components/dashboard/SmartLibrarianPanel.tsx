@@ -36,7 +36,8 @@ export const SmartLibrarianPanel: React.FC<SmartLibrarianPanelProps> = ({ onOpen
     notionApiKey, 
     currentTemplate, 
     createdNotionResource,
-    setIsNotionSettingsModalOpen 
+    setIsNotionSettingsModalOpen,
+    showToast
   } = useApp();
 
   const [question, setQuestion] = useState('');
@@ -67,9 +68,12 @@ export const SmartLibrarianPanel: React.FC<SmartLibrarianPanelProps> = ({ onOpen
       setCurrentAnswer(answer);
       setHistory(prev => [answer, ...prev.slice(0, 9)]);
       if (!targetQuery) setQuestion('');
+      showToast('사서 Q&A 답변이 도착했습니다!', 'success');
     } catch (err: any) {
       console.error('Librarian search error:', err);
-      setErrorMsg(err.message || '질문 답변 생성 중 오류가 발생했습니다.');
+      const msg = err.message || '질문 답변 생성 중 오류가 발생했습니다.';
+      setErrorMsg(msg);
+      showToast(msg, 'error');
     } finally {
       setIsLoading(false);
       setLoadingStep('');

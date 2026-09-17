@@ -34,7 +34,8 @@ export const SettlementReportModal: React.FC<SettlementReportModalProps> = ({ is
     notionParentPageId, 
     currentTemplate, 
     createdNotionResource,
-    setIsNotionSettingsModalOpen 
+    setIsNotionSettingsModalOpen,
+    showToast
   } = useApp();
 
   const [periodDays, setPeriodDays] = useState<7 | 30>(7);
@@ -53,7 +54,7 @@ export const SettlementReportModal: React.FC<SettlementReportModalProps> = ({ is
     setPublishResult(null);
 
     try {
-      // 1. 데이터 집계
+      // 1. 기간별 데이터 집계
       const aggregated = await aggregateWorkspaceData(
         days,
         notionApiKey,
@@ -67,9 +68,12 @@ export const SettlementReportModal: React.FC<SettlementReportModalProps> = ({ is
       setIsGeneratingAi(true);
       const generated = await generateSettlementReportWithGemini(aggregated, apiKey);
       setReport(generated);
+      showToast('AI 결산 브리핑 리포트 생성이 완료되었습니다!', 'success');
     } catch (err: any) {
       console.error('Failed to load settlement data:', err);
-      setErrorMsg(err.message || '결산 데이터를 불러오는 데 실패했습니다.');
+      const msg = err.message || '결산 데이터를 불러오는 데 실패했습니다.';
+      setErrorMsg(msg);
+      showToast(msg, 'error');
     } finally {
       setIsAggregating(false);
       setIsGeneratingAi(false);
@@ -87,7 +91,9 @@ export const SettlementReportModal: React.FC<SettlementReportModalProps> = ({ is
     if (!report) return;
 
     if (!notionApiKey || !notionParentPageId) {
-      setErrorMsg('노션 워크스페이스 연동 정보(API Key 및 부모 페이지 ID)가 설정되지 않았습니다.');
+      const msg = '노션 워크스페이스 연동 정보(API Key 및 부모 페이지 ID)가 설정되지 않았습니다.';
+      setErrorMsg(msg);
+      showToast(msg, 'error');
       return;
     }
 
@@ -101,8 +107,15 @@ export const SettlementReportModal: React.FC<SettlementReportModalProps> = ({ is
         notionParentPageId
       );
       setPublishResult(result);
+      if (result.success) {
+        showToast('결산 리포트가 노션에 발행되었습니다!', 'success');
+      } else {
+        showToast(result.message || '노션 발행 실패', 'error');
+      }
     } catch (err: any) {
-      setErrorMsg(err.message || '노션 페이지 발행 중 오류가 발생했습니다.');
+      const msg = err.message || '노션 페이지 발행 중 오류가 발생했습니다.';
+      setErrorMsg(msg);
+      showToast(msg, 'error');
     } finally {
       setIsPublishing(false);
     }

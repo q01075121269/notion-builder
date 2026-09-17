@@ -289,7 +289,7 @@ const DEFAULT_GOOGLE_SYNC_CONFIG: GoogleSyncConfig = {
 
 // =================== 스토리지 API =================== //
 
-// 템플릿 목록 조회 (초기 시드 자동 병합)
+// 템플릿 목록 조회 (초기 시드 자동 병합 및 무결성 보장)
 export const getArchivedTemplates = (): ArchivedTemplate[] => {
   try {
     const raw = localStorage.getItem(STORAGE_KEYS.TEMPLATES);
@@ -297,7 +297,30 @@ export const getArchivedTemplates = (): ArchivedTemplate[] => {
       localStorage.setItem(STORAGE_KEYS.TEMPLATES, JSON.stringify(SEED_TEMPLATES));
       return SEED_TEMPLATES;
     }
-    return JSON.parse(raw);
+    const parsed = JSON.parse(raw);
+    if (!Array.isArray(parsed)) {
+      localStorage.setItem(STORAGE_KEYS.TEMPLATES, JSON.stringify(SEED_TEMPLATES));
+      return SEED_TEMPLATES;
+    }
+    // 데이터 손상 방어: 누락된 필수 필드 기본값 보장
+    return parsed.map((item, idx) => ({
+      id: item?.id || `arch-${Date.now()}-${idx}`,
+      title: item?.title || '제목 없는 템플릿',
+      description: item?.description || '',
+      icon: item?.icon || '📑',
+      cover_url: item?.cover_url || 'https://images.unsplash.com/photo-1519389950473-47ba0277781c?auto=format&fit=crop&w=1600&q=80',
+      tags: Array.isArray(item?.tags) ? item.tags : ['#템플릿'],
+      templateData: item?.templateData || {
+        title: item?.title || '기본 템플릿',
+        description: item?.description || '',
+        icon: item?.icon || '📑',
+        databases: [],
+        page_layout: []
+      },
+      createdAt: typeof item?.createdAt === 'number' ? item.createdAt : Date.now(),
+      updatedAt: typeof item?.updatedAt === 'number' ? item.updatedAt : Date.now(),
+      notionUrl: item?.notionUrl || undefined
+    }));
   } catch (e) {
     console.error('Failed to get archived templates:', e);
     return SEED_TEMPLATES;
@@ -335,7 +358,20 @@ export const getPromptSnippets = (): PromptSnippet[] => {
       localStorage.setItem(STORAGE_KEYS.PROMPTS, JSON.stringify(SEED_PROMPTS));
       return SEED_PROMPTS;
     }
-    return JSON.parse(raw);
+    const parsed = JSON.parse(raw);
+    if (!Array.isArray(parsed)) {
+      localStorage.setItem(STORAGE_KEYS.PROMPTS, JSON.stringify(SEED_PROMPTS));
+      return SEED_PROMPTS;
+    }
+    return parsed.map((item, idx) => ({
+      id: item?.id || `snip-${Date.now()}-${idx}`,
+      title: item?.title || '제목 없음',
+      category: item?.category || '프롬프트',
+      description: item?.description || '',
+      content: item?.content || '',
+      tags: Array.isArray(item?.tags) ? item.tags : ['#프롬프트'],
+      createdAt: typeof item?.createdAt === 'number' ? item.createdAt : Date.now()
+    }));
   } catch (e) {
     console.error('Failed to get prompt snippets:', e);
     return SEED_PROMPTS;
@@ -373,7 +409,20 @@ export const getInspirations = (): InspirationItem[] => {
       localStorage.setItem(STORAGE_KEYS.INSPIRATION, JSON.stringify(SEED_INSPIRATIONS));
       return SEED_INSPIRATIONS;
     }
-    return JSON.parse(raw);
+    const parsed = JSON.parse(raw);
+    if (!Array.isArray(parsed)) {
+      localStorage.setItem(STORAGE_KEYS.INSPIRATION, JSON.stringify(SEED_INSPIRATIONS));
+      return SEED_INSPIRATIONS;
+    }
+    return parsed.map((item, idx) => ({
+      id: item?.id || `insp-${Date.now()}-${idx}`,
+      title: item?.title || '영감 이미지',
+      imageUrl: item?.imageUrl || 'https://images.unsplash.com/photo-1499750310107-5fef28a66643?auto=format&fit=crop&w=1200&q=80',
+      category: item?.category || '커버 이미지',
+      tags: Array.isArray(item?.tags) ? item.tags : ['#영감'],
+      author: item?.author || 'Unsplash',
+      createdAt: typeof item?.createdAt === 'number' ? item.createdAt : Date.now()
+    }));
   } catch (e) {
     console.error('Failed to get inspiration items:', e);
     return SEED_INSPIRATIONS;

@@ -97,6 +97,11 @@ interface AppContextType {
   applyPreset: (presetKey: string) => void;
   resetToDefault: () => void;
   updateCurrentCover: (newUrl: string) => void;
+
+  // 전역 알림 토스트 (Runtime Defense & Alerts)
+  toast: { message: string; type: 'success' | 'error' | 'info' } | null;
+  showToast: (message: string, type?: 'success' | 'error' | 'info') => void;
+  hideToast: () => void;
 }
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
@@ -257,12 +262,20 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     });
   };
 
+  // 전역 토스트 상태 (런타임 알림)
+  const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' | 'info' } | null>(null);
+  const showToast = (message: string, type: 'success' | 'error' | 'info' = 'info') => {
+    setToast({ message, type });
+  };
+  const hideToast = () => setToast(null);
+
   const updateCurrentCover = (newUrl: string) => {
     if (currentTemplate) {
       setCurrentTemplate({
         ...currentTemplate,
         cover_url: newUrl
       });
+      showToast('커버 이미지가 업데이트되었습니다.', 'success');
     }
   };
 
@@ -272,7 +285,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     attachedFiles: import('../types/fileAttachment').AttachedFile[] = []
   ) => {
     if (!isAuthenticated) {
-      alert('보안 인증이 필요합니다. Google 계정으로 로그인 후 이용해 주세요.');
+      showToast('보안 인증이 필요합니다. Google 계정으로 로그인해 주세요.', 'error');
       return;
     }
     if ((!prompt.trim() && attachedFiles.length === 0) || isGenerating) return;
@@ -404,10 +417,12 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
               : msg
           )
         );
+        showToast(`"${template.title}" 템플릿 생성이 완료되었습니다!`, 'success');
       }
 
     } catch (err: any) {
       const errorMsg = err?.message || '대화 처리 중 오류가 발생했습니다.';
+      showToast(errorMsg, 'error');
       setMessages(prev =>
         prev.map(msg =>
           msg.id === assistantMessageId
@@ -428,7 +443,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
   // 2단계: 실제 노션 워크스페이스에 템플릿 자동 배포 실행 핸들러
   const publishToNotion = async () => {
     if (!isAuthenticated) {
-      alert('보안 인증이 필요합니다. Google 계정으로 로그인 후 이용해 주세요.');
+      showToast('보안 인증이 필요합니다. Google 계정으로 로그인 후 이용해 주세요.', 'error');
       return;
     }
     if (!currentTemplate) return;
@@ -455,6 +470,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
       setCreatedNotionResource(result);
       triggerCelebration();
       setIsPublishSuccessModalOpen(true);
+      showToast(`노션 워크스페이스에 "${currentTemplate.title}" 템플릿이 성공적으로 배포되었습니다!`, 'success');
 
       // 4단계: 배포 성공 시 내 보관함에도 자동 아카이빙 영구 보존
       saveArchivedTemplate({
@@ -525,9 +541,11 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
       const guide = await generateGuideWithGemini(currentTemplate, apiKey, audience, selectedModel);
       setCurrentGuide(guide);
       triggerCelebration();
-    } catch (e) {
+      showToast('초보자 맞춤형 설명서가 생성되었습니다!', 'success');
+    } catch (e: any) {
       console.error('가이드 생성 실패:', e);
       setCurrentGuide(createFallbackGuide(currentTemplate, audience));
+      showToast('설명서 생성 중 오류가 발생하여 기본 설명서로 전환되었습니다.', 'info');
     } finally {
       setIsGeneratingGuide(false);
     }
@@ -536,18 +554,30 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
   // 5단계: 노션 워크스페이스에 설명서 토글 블록 자동 삽입 핸들러
   const appendGuideToNotion = async (): Promise<{ success: boolean; message: string }> => {
     if (!currentGuide) {
+      showToast('생성된 설명서가 없습니다.', 'error');
       return { success: false, message: '생성된 설명서가 없습니다.' };
     }
     if (!createdNotionResource || !notionApiKey) {
+      const msg = '먼저 상단의 [내 노션에 템플릿 생성하기]를 통해 노션 워크스페이스에 페이지를 생성해 주세요.';
+      showToast(msg, 'error');
       return { 
         success: false, 
-        message: '먼저 상단의 [내 노션에 템플릿 생성하기]를 통해 노션 워크스페이스에 페이지를 생성해 주세요.' 
+        message: msg
       };
     }
     setIsAppendingGuideToNotion(true);
     try {
       const res = await appendGuideToggleToNotionPage(createdNotionResource.pageId, currentGuide, notionApiKey);
+      if (res.success) {
+        showToast('노션 페이지에 사용 설명서가 추가되었습니다!', 'success');
+      } else {
+        showToast(res.message || '설명서 삽입에 실패했습니다.', 'error');
+      }
       return res;
+    } catch (err: any) {
+      const errMsg = err?.message || '노션 API 통신 중 오류가 발생했습니다.';
+      showToast(errMsg, 'error');
+      return { success: false, message: errMsg };
     } finally {
       setIsAppendingGuideToNotion(false);
     }
@@ -614,7 +644,10 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
         clearChatHistory,
         applyPreset,
         resetToDefault,
-        updateCurrentCover
+        updateCurrentCover,
+        toast,
+        showToast,
+        hideToast
       }}
     >
       {children}

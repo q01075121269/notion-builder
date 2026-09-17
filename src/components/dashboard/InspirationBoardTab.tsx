@@ -163,7 +163,7 @@ export const InspirationBoardTab: React.FC<InspirationBoardTabProps> = ({
                 <div className="flex items-center justify-between text-[11px] text-neutral-400">
                   <span>{item.author || 'Unsplash'}</span>
                   <div className="flex gap-1">
-                    {item.tags.slice(0, 2).map((t, idx) => (
+                    {(item.tags || []).slice(0, 2).map((t, idx) => (
                       <span key={idx} className="text-[10px] text-neutral-500">{t}</span>
                     ))}
                   </div>

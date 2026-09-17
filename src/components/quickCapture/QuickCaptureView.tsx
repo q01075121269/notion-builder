@@ -255,7 +255,7 @@ export const QuickCaptureView: React.FC = () => {
         <div className="bg-white dark:bg-notion-dark-card border border-neutral-200 dark:border-neutral-800 rounded-3xl shadow-sm overflow-hidden">
           {activeMode === 'voice' && (
             <VoiceCapturePanel
-              onSendTranscript={(text) => handleProcessText(text, 'voice')}
+              onSendTranscript={(text: string) => handleProcessText(text, 'voice')}
               isProcessing={isProcessing}
             />
           )}
@@ -269,7 +269,7 @@ export const QuickCaptureView: React.FC = () => {
 
           {activeMode === 'memo' && (
             <TextMemoPanel
-              onSendMemo={(memo) => handleProcessText(memo, 'memo')}
+              onSendMemo={(memo: string) => handleProcessText(memo, 'memo')}
               isProcessing={isProcessing}
             />
           )}

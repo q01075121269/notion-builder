@@ -1,6 +1,19 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Mic, MicOff, Sparkles, Send, Volume2, AlertCircle } from 'lucide-react';
 
+// 음성 인식 중복 단어 및 구문 정규화 제거 함수
+function cleanDuplicateSpeech(text: string): string {
+  if (!text) return '';
+  // 1. 연속된 동일 단어 제거 (예: "회의 회의" -> "회의", "어 어 어떤" -> "어 어떤")
+  let cleaned = text.replace(/\b(\S+)(?:\s+\1\b)+/gi, '$1');
+  
+  // 2. 연속된 동일 구문 제거 (예: "점심 먹고 점심 먹고" -> "점심 먹고")
+  cleaned = cleaned.replace(/(\b.+?\b)\s+\1/gi, '$1');
+
+  // 3. 다중 공백 정리
+  return cleaned.replace(/\s+/g, ' ').trim();
+}
+
 interface VoiceCapturePanelProps {
   onSendTranscript: (text: string) => void;
   isProcessing: boolean;
@@ -13,7 +26,10 @@ export const VoiceCapturePanel: React.FC<VoiceCapturePanelProps> = ({
   const [isRecording, setIsRecording] = useState(false);
   const [transcript, setTranscript] = useState('');
   const [interimTranscript, setInterimTranscript] = useState('');
-  const [speechSupported, setSpeechSupported] = useState(true);
+  const [speechSupported] = useState<boolean>(() => {
+    if (typeof window === 'undefined') return false;
+    return Boolean((window as any).SpeechRecognition || (window as any).webkitSpeechRecognition);
+  });
   const [permissionDenied, setPermissionDenied] = useState(false);
   const recognitionRef = useRef<any>(null);
 
@@ -22,7 +38,6 @@ export const VoiceCapturePanel: React.FC<VoiceCapturePanelProps> = ({
       (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
 
     if (!SpeechRecognition) {
-      setSpeechSupported(false);
       return;
     }
 
@@ -35,7 +50,7 @@ export const VoiceCapturePanel: React.FC<VoiceCapturePanelProps> = ({
       let finalStr = '';
       let interimStr = '';
 
-      // event.results 전체를 0부터 순회하여 확정된 텍스트와 임시 텍스트를 명확히 분리
+      // event.results 전체를 순회하여 확정된 텍스트와 임시 텍스트를 엄격히 분리
       for (let i = 0; i < event.results.length; ++i) {
         const result = event.results[i];
         if (result.isFinal) {
@@ -45,10 +60,12 @@ export const VoiceCapturePanel: React.FC<VoiceCapturePanelProps> = ({
         }
       }
 
-      // 이전 상태 누적(prev + finalStr) 대신 확정된 전체 문장 스냅샷을 직접 설정하여 중복 완벽 차단
-      if (finalStr) {
-        setTranscript(finalStr.trim());
+      // 최종 확정 텍스트에 중복 단어/구문 필터링 적용
+      const cleanedFinal = cleanDuplicateSpeech(finalStr);
+      if (cleanedFinal) {
+        setTranscript(cleanedFinal);
       }
+      // 임시 텍스트는 프리뷰용으로만 실시간 표시 (누적 방지)
       setInterimTranscript(interimStr.trim());
     };
 
@@ -61,22 +78,22 @@ export const VoiceCapturePanel: React.FC<VoiceCapturePanelProps> = ({
       }
     };
 
+    // 음성 종료 시 최종 확정된 텍스트만 깔끔하게 보존하고 임시 버퍼는 100% 비움
     recognition.onend = () => {
       setIsRecording(false);
-      // 종료 시 임시 텍스트가 남아있으면 확정 텍스트로 안전하게 1회 병합 후 클리어
-      setInterimTranscript(currentInterim => {
-        if (currentInterim) {
-          setTranscript(prev => (prev ? `${prev} ${currentInterim}`.trim() : currentInterim));
-        }
-        return '';
-      });
+      setInterimTranscript('');
+      setTranscript(prev => cleanDuplicateSpeech(prev));
     };
 
     recognitionRef.current = recognition;
 
     return () => {
       if (recognitionRef.current) {
-        recognitionRef.current.abort();
+        try {
+          recognitionRef.current.abort();
+        } catch {
+          // ignore
+        }
       }
     };
   }, []);
@@ -85,8 +102,13 @@ export const VoiceCapturePanel: React.FC<VoiceCapturePanelProps> = ({
     if (!speechSupported) return;
 
     if (isRecording) {
-      recognitionRef.current?.stop();
+      try {
+        recognitionRef.current?.stop();
+      } catch {
+        // ignore
+      }
       setIsRecording(false);
+      setInterimTranscript('');
     } else {
       setTranscript('');
       setInterimTranscript('');
@@ -100,11 +122,21 @@ export const VoiceCapturePanel: React.FC<VoiceCapturePanelProps> = ({
   };
 
   const handleQuickSample = (sample: string) => {
-    setTranscript(sample);
+    setTranscript(cleanDuplicateSpeech(sample));
+    setInterimTranscript('');
   };
 
   const handleSend = () => {
-    const textToSend = transcript.trim() || interimTranscript.trim();
+    if (isRecording) {
+      try {
+        recognitionRef.current?.stop();
+      } catch {
+        // ignore
+      }
+      setIsRecording(false);
+    }
+
+    const textToSend = cleanDuplicateSpeech(transcript.trim() || interimTranscript.trim());
     if (!textToSend || isProcessing) return;
     onSendTranscript(textToSend);
     setTranscript('');

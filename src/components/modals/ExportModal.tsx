@@ -3,28 +3,29 @@ import { useApp } from '../../context/AppContext';
 import { Share2, Copy, Check, FileText, X } from 'lucide-react';
 
 export const ExportModal: React.FC = () => {
-  const { isExportModalOpen, setIsExportModalOpen, currentTemplate } = useApp();
+  const { isExportModalOpen, setIsExportModalOpen, currentTemplate, showToast } = useApp();
   const [copied, setCopied] = useState<boolean>(false);
 
   if (!isExportModalOpen || !currentTemplate) return null;
 
   const generateMarkdownSummary = () => {
-    let md = `# ${currentTemplate.icon} ${currentTemplate.title}\n\n`;
+    let md = `# ${currentTemplate.icon || '📑'} ${currentTemplate.title}\n\n`;
     md += `> ${currentTemplate.description || '노션 템플릿'}\n\n`;
     
-    md += `## 🗄️ 데이터베이스 구성 (${currentTemplate.databases.length}개)\n\n`;
-    currentTemplate.databases.forEach((db, i) => {
+    const dbs = currentTemplate.databases || [];
+    md += `## 🗄️ 데이터베이스 구성 (${dbs.length}개)\n\n`;
+    dbs.forEach((db, i) => {
       md += `### ${i + 1}. ${db.name}\n`;
       if (db.description) md += `- **설명**: ${db.description}\n`;
       md += `- **속성(Properties)**:\n`;
-      db.properties.forEach(p => {
+      (db.properties || []).forEach(p => {
         md += `  - \`${p.name}\` (${p.type}${p.expression ? `: ${p.expression}` : ''}${p.target ? ` -> ${p.target}` : ''})\n`;
       });
       md += '\n';
     });
 
     md += `## 📑 페이지 레이아웃 구조\n\n`;
-    currentTemplate.page_layout.forEach((b) => {
+    (currentTemplate.page_layout || []).forEach((b) => {
       if (b.type === 'callout') {
         md += `> ${b.icon || '💡'} **Callout**: ${b.content}\n\n`;
       } else if (b.type === 'toggle') {
@@ -41,9 +42,11 @@ export const ExportModal: React.FC = () => {
     try {
       await navigator.clipboard.writeText(generateMarkdownSummary());
       setCopied(true);
+      showToast('마크다운 요약본이 클립보드에 복사되었습니다!', 'success');
       setTimeout(() => setCopied(false), 2000);
-    } catch (err) {
-      console.error(err);
+    } catch (err: any) {
+      console.error('클립보드 복사 실패:', err);
+      showToast('클립보드 복사에 실패했습니다.', 'error');
     }
   };
 

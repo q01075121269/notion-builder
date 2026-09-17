@@ -3,7 +3,7 @@ import { useApp } from '../../context/AppContext';
 import { Code2, Copy, Check, Download, X } from 'lucide-react';
 
 export const RawJsonModal: React.FC = () => {
-  const { isRawJsonModalOpen, setIsRawJsonModalOpen, currentTemplate } = useApp();
+  const { isRawJsonModalOpen, setIsRawJsonModalOpen, currentTemplate, showToast } = useApp();
   const [copied, setCopied] = useState<boolean>(false);
 
   if (!isRawJsonModalOpen || !currentTemplate) return null;
@@ -14,22 +14,31 @@ export const RawJsonModal: React.FC = () => {
     try {
       await navigator.clipboard.writeText(jsonString);
       setCopied(true);
+      showToast('노션 구조 원시 JSON이 클립보드에 복사되었습니다!', 'success');
       setTimeout(() => setCopied(false), 2000);
-    } catch (err) {
+    } catch (err: any) {
       console.error('클립보드 복사 실패:', err);
+      showToast('클립보드 복사에 실패했습니다.', 'error');
     }
   };
 
   const handleDownload = () => {
-    const blob = new Blob([jsonString], { type: 'application/json' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `${currentTemplate.title.replace(/\s+/g, '_')}_notion_template.json`;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    URL.revokeObjectURL(url);
+    try {
+      const blob = new Blob([jsonString], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      const safeTitle = (currentTemplate.title || 'template').replace(/[^a-zA-Z0-9가-힣_-]+/g, '_');
+      a.download = `${safeTitle}_notion_template.json`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+      showToast('JSON 템플릿 파일이 다운로드되었습니다!', 'success');
+    } catch (err: any) {
+      console.error('다운로드 실패:', err);
+      showToast('다운로드 중 오류가 발생했습니다.', 'error');
+    }
   };
 
   return (

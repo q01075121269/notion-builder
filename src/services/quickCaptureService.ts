@@ -371,11 +371,20 @@ export async function dispatchRoutedTasksToNotion(
     };
 
     try {
-      const res = await fetch('/api/notion/v1/pages', {
+      let res = await fetch('/api/notion/v1/pages', {
         method: 'POST',
         headers,
         body: JSON.stringify(pagePayload)
       });
+
+      // 404 NOT_FOUND 감지 시 Next.js / Vercel 쿼리 엔드포인트로 즉시 2차 재시도
+      if (!res.ok && res.status === 404) {
+        res = await fetch('/api/notion?path=v1/pages', {
+          method: 'POST',
+          headers,
+          body: JSON.stringify(pagePayload)
+        });
+      }
 
       if (res.ok) {
         const pageData = await res.json();
@@ -383,10 +392,10 @@ export async function dispatchRoutedTasksToNotion(
         if (pageData.url) pageUrls.push(pageData.url);
       } else {
         const errJson = await res.json().catch(() => ({}));
-        errors.push(`[${task.title}] 전송 실패: ${errJson.message || 'API 거절'}`);
+        errors.push(`[${task.title}] 노션 전송 실패 (${res.status}): ${errJson.message || '데이터베이스 속성 규격 불일치'}`);
       }
     } catch (e: any) {
-      errors.push(`[${task.title}] 네트워크 에러: ${e.message}`);
+      errors.push(`[${task.title}] 통신 에러: ${e.message || '네트워크 연결 실패'}`);
     }
   }
 

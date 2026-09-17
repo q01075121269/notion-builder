@@ -15,9 +15,8 @@ import {
 import { 
   SmartLibrarianPanel 
 } from './SmartLibrarianPanel';
-import { 
-  SettlementReportModal 
-} from './SettlementReportModal';
+import { SettlementReportModal } from './SettlementReportModal';
+import { ErrorBoundary } from '../common/ErrorBoundary';
 import {
   Search, 
   Layers, 
@@ -69,58 +68,105 @@ export const DashboardView: React.FC = () => {
   const [isNewModalOpen, setIsNewModalOpen] = useState(false);
   const [isSettlementModalOpen, setIsSettlementModalOpen] = useState(false);
 
-  // Storage State
-  const [templates, setTemplates] = useState<ArchivedTemplate[]>(() => getArchivedTemplates());
-  const [snippets, setSnippets] = useState<PromptSnippet[]>(() => getPromptSnippets());
-  const [inspirations, setInspirations] = useState<InspirationItem[]>(() => getInspirations());
+  // Storage State (안전한 기본값 보장)
+  const [templates, setTemplates] = useState<ArchivedTemplate[]>(() => {
+    try {
+      return getArchivedTemplates() || [];
+    } catch {
+      return [];
+    }
+  });
+  const [snippets, setSnippets] = useState<PromptSnippet[]>(() => {
+    try {
+      return getPromptSnippets() || [];
+    } catch {
+      return [];
+    }
+  });
+  const [inspirations, setInspirations] = useState<InspirationItem[]>(() => {
+    try {
+      return getInspirations() || [];
+    } catch {
+      return [];
+    }
+  });
 
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const refreshAll = () => {
-    setTemplates(getArchivedTemplates());
-    setSnippets(getPromptSnippets());
-    setInspirations(getInspirations());
+    try {
+      setTemplates(getArchivedTemplates() || []);
+      setSnippets(getPromptSnippets() || []);
+      setInspirations(getInspirations() || []);
+    } catch (err) {
+      console.error('Failed to refresh archive storage:', err);
+    }
   };
 
   // 대표 태그 목록
   const filterTags = ['#전체', '#업무', '#스터디', '#라이프스타일', '#캘린더연동', '#프롬프트', '#미니멀'];
 
-  // 1. 템플릿 필터링
+  // 1. 템플릿 필터링 (완전 방어)
   const filteredTemplates = useMemo(() => {
-    return templates.filter((tpl) => {
-      const matchQuery = 
-        tpl.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        tpl.description.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        tpl.tags.some(t => t.toLowerCase().includes(searchQuery.toLowerCase()));
+    const list = Array.isArray(templates) ? templates : [];
+    const q = (searchQuery || '').trim().toLowerCase();
+
+    return list.filter((tpl) => {
+      if (!tpl) return false;
+      const title = (tpl.title || '').toLowerCase();
+      const desc = (tpl.description || '').toLowerCase();
+      const tags = Array.isArray(tpl.tags) ? tpl.tags : [];
+
+      const matchQuery = !q || 
+        title.includes(q) ||
+        desc.includes(q) ||
+        tags.some(t => (t || '').toLowerCase().includes(q));
       
-      const matchTag = selectedTag === '#전체' || tpl.tags.includes(selectedTag);
+      const matchTag = selectedTag === '#전체' || tags.includes(selectedTag);
       return matchQuery && matchTag;
     });
   }, [templates, searchQuery, selectedTag]);
 
-  // 2. 프롬프트 스니펫 필터링
+  // 2. 프롬프트 스니펫 필터링 (완전 방어)
   const filteredSnippets = useMemo(() => {
-    return snippets.filter((snip) => {
-      const matchQuery = 
-        snip.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        snip.description.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        snip.content.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        snip.tags.some(t => t.toLowerCase().includes(searchQuery.toLowerCase()));
+    const list = Array.isArray(snippets) ? snippets : [];
+    const q = (searchQuery || '').trim().toLowerCase();
+
+    return list.filter((snip) => {
+      if (!snip) return false;
+      const title = (snip.title || '').toLowerCase();
+      const desc = (snip.description || '').toLowerCase();
+      const content = (snip.content || '').toLowerCase();
+      const tags = Array.isArray(snip.tags) ? snip.tags : [];
+
+      const matchQuery = !q || 
+        title.includes(q) ||
+        desc.includes(q) ||
+        content.includes(q) ||
+        tags.some(t => (t || '').toLowerCase().includes(q));
       
-      const matchTag = selectedTag === '#전체' || snip.tags.includes(selectedTag);
+      const matchTag = selectedTag === '#전체' || tags.includes(selectedTag);
       return matchQuery && matchTag;
     });
   }, [snippets, searchQuery, selectedTag]);
 
-  // 3. 영감 핀 필터링
+  // 3. 영감 핀 필터링 (완전 방어)
   const filteredInspirations = useMemo(() => {
-    return inspirations.filter((item) => {
-      const matchQuery = 
-        item.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        (item.author && item.author.toLowerCase().includes(searchQuery.toLowerCase())) ||
-        item.tags.some(t => t.toLowerCase().includes(searchQuery.toLowerCase()));
+    const list = Array.isArray(inspirations) ? inspirations : [];
+    const q = (searchQuery || '').trim().toLowerCase();
+
+    return list.filter((item) => {
+      if (!item) return false;
+      const title = (item.title || '').toLowerCase();
+      const author = (item.author || '').toLowerCase();
+      const tags = Array.isArray(item.tags) ? item.tags : [];
+
+      const matchQuery = !q || 
+        title.includes(q) ||
+        author.includes(q) ||
+        tags.some(t => (t || '').toLowerCase().includes(q));
       
-      const matchTag = selectedTag === '#전체' || item.tags.includes(selectedTag);
+      const matchTag = selectedTag === '#전체' || tags.includes(selectedTag);
       return matchQuery && matchTag;
     });
   }, [inspirations, searchQuery, selectedTag]);
@@ -386,48 +432,50 @@ export const DashboardView: React.FC = () => {
           </button>
         </div>
 
-        {/* Tab Content Panels */}
+        {/* Tab Content Panels with ErrorBoundary */}
         <div className="pt-2">
-          {activeTab === 'templates' && (
-            <TemplateArchiveTab
-              templates={filteredTemplates}
-              onDelete={(id) => {
-                deleteArchivedTemplate(id);
-                refreshAll();
-              }}
-              onSelectEdit={handleLoadTemplateToBuilder}
-              onArchiveCurrent={handleArchiveCurrentTemplate}
-            />
-          )}
+          <ErrorBoundary fallbackTitle="보관함 화면을 렌더링하는 중 문제가 발생했습니다." onReset={refreshAll}>
+            {activeTab === 'templates' && (
+              <TemplateArchiveTab
+                templates={filteredTemplates}
+                onDelete={(id) => {
+                  deleteArchivedTemplate(id);
+                  refreshAll();
+                }}
+                onSelectEdit={handleLoadTemplateToBuilder}
+                onArchiveCurrent={handleArchiveCurrentTemplate}
+              />
+            )}
 
-          {activeTab === 'prompts' && (
-            <PromptSnippetTab
-              snippets={filteredSnippets}
-              onDelete={(id) => {
-                deletePromptSnippet(id);
-                refreshAll();
-              }}
-              onOpenNewModal={() => setIsNewModalOpen(true)}
-              onSendToBuilderChat={handleSendToBuilderChat}
-            />
-          )}
+            {activeTab === 'prompts' && (
+              <PromptSnippetTab
+                snippets={filteredSnippets}
+                onDelete={(id) => {
+                  deletePromptSnippet(id);
+                  refreshAll();
+                }}
+                onOpenNewModal={() => setIsNewModalOpen(true)}
+                onSendToBuilderChat={handleSendToBuilderChat}
+              />
+            )}
 
-          {activeTab === 'inspiration' && (
-            <InspirationBoardTab
-              items={filteredInspirations}
-              onDelete={(id) => {
-                deleteInspiration(id);
-                refreshAll();
-              }}
-              onOpenNewModal={() => setIsNewModalOpen(true)}
-            />
-          )}
+            {activeTab === 'inspiration' && (
+              <InspirationBoardTab
+                items={filteredInspirations}
+                onDelete={(id) => {
+                  deleteInspiration(id);
+                  refreshAll();
+                }}
+                onOpenNewModal={() => setIsNewModalOpen(true)}
+              />
+            )}
 
-          {activeTab === 'librarian' && (
-            <SmartLibrarianPanel 
-              onOpenSettlement={() => setIsSettlementModalOpen(true)} 
-            />
-          )}
+            {activeTab === 'librarian' && (
+              <SmartLibrarianPanel 
+                onOpenSettlement={() => setIsSettlementModalOpen(true)} 
+              />
+            )}
+          </ErrorBoundary>
         </div>
 
       </div>

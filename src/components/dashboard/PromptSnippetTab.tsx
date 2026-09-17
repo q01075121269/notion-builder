@@ -136,7 +136,7 @@ export const PromptSnippetTab: React.FC<PromptSnippetTabProps> = ({
               {/* Footer: Tags & Send to Chat Button */}
               <div className="flex items-center justify-between pt-1 text-xs">
                 <div className="flex flex-wrap gap-1">
-                  {item.tags.map((t, idx) => (
+                  {(item.tags || []).map((t, idx) => (
                     <span
                       key={idx}
                       className="text-[10px] text-neutral-400 dark:text-neutral-500 font-medium"

@@ -59,7 +59,7 @@ function geminiApiProxyPlugin(): Plugin {
 
           req.on('end', () => {
             const candidateModels = Array.from(
-              new Set([model, 'gemini-2.0-flash', 'gemini-2.5-flash', 'gemini-1.5-flash-latest'])
+              new Set(['gemini-3.6-flash', model, 'gemini-3.8-flash', 'gemini-2.5-flash', 'gemini-2.0-flash'])
             );
 
             const tryModel = (idx: number) => {
@@ -89,8 +89,14 @@ function geminiApiProxyPlugin(): Plugin {
                   responseData += chunk;
                 });
                 proxyRes.on('end', () => {
-                  if (proxyRes.statusCode === 404 && idx < candidateModels.length - 1) {
-                    console.warn(`[Vite Gemini Proxy] Model '${currentM}' 404 감지. '${candidateModels[idx + 1]}'로 자동 전환합니다.`);
+                  const isNotFound =
+                    proxyRes.statusCode === 404 ||
+                    responseData.includes('not found') ||
+                    responseData.includes('no longer available') ||
+                    responseData.includes('NOT_FOUND');
+
+                  if (isNotFound && idx < candidateModels.length - 1) {
+                    console.warn(`[Vite Gemini Proxy] Model '${currentM}' 404/지원종료 감지. '${candidateModels[idx + 1]}'로 자동 전환합니다.`);
                     tryModel(idx + 1);
                     return;
                   }

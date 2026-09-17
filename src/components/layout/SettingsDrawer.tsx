@@ -296,7 +296,9 @@ export const SettingsDrawer: React.FC<SettingsDrawerProps> = ({ isOpen, onClose 
                   onChange={(e) => setSelectedModel(e.target.value as GeminiModelType)}
                   className="px-2.5 py-1.5 rounded-xl border border-neutral-200 dark:border-neutral-700 bg-neutral-50 dark:bg-neutral-800 text-xs font-bold text-neutral-800 dark:text-neutral-200 focus:outline-none cursor-pointer"
                 >
-                  <option value="gemini-2.0-flash">2.0 Flash (권장/초고속)</option>
+                  <option value="gemini-3.6-flash">3.6 Flash (공식 최신/권장)</option>
+                  <option value="gemini-3.8-flash">3.8 Flash (최신)</option>
+                  <option value="gemini-2.0-flash">2.0 Flash (레거시)</option>
                   <option value="gemini-1.5-flash">1.5 Flash (레거시)</option>
                   <option value="gemini-1.5-pro">1.5 Pro (고성능/정밀)</option>
                 </select>

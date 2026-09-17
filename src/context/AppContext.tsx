@@ -157,8 +157,8 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
   // Gemini Model & API Key
   const [selectedModel, setSelectedModelState] = useState<GeminiModelType>(() => {
     const saved = localStorage.getItem('gemini_selected_model') as GeminiModelType;
-    if (saved && saved !== 'gemini-1.5-flash') return saved;
-    return 'gemini-2.0-flash';
+    if (saved && saved !== 'gemini-1.5-flash' && saved !== 'gemini-2.0-flash') return saved;
+    return 'gemini-3.6-flash';
   });
 
   const setSelectedModel = (model: GeminiModelType) => {

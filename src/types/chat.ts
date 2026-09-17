@@ -20,4 +20,4 @@ export interface ChatMessage {
   attachments?: ChatMessageAttachment[];
 }
 
-export type GeminiModelType = 'gemini-1.5-flash' | 'gemini-1.5-pro' | 'gemini-2.0-flash';
+export type GeminiModelType = 'gemini-3.6-flash' | 'gemini-3.8-flash' | 'gemini-2.0-flash' | 'gemini-1.5-flash' | 'gemini-1.5-pro';

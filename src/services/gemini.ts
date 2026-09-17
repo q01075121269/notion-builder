@@ -144,7 +144,7 @@ export async function processConversationWithGemini(
     throw new Error('Gemini API 키가 설정되지 않았습니다. 상단 네비게이션의 🔑 [API 키 설정] 버튼을 눌러 키를 입력해 주세요.');
   }
 
-  const targetModel = (model || 'gemini-1.5-flash').replace(/^models\//, '').trim() || 'gemini-1.5-flash';
+  const targetModel = (model || 'gemini-3.6-flash').replace(/^models\//, '').trim() || 'gemini-3.6-flash';
 
   // 1. 첨부 파일 분석 텍스트 블록 구성
   let filesContextBlock = '';
@@ -246,7 +246,7 @@ export async function processConversationWithGemini(
     }
   } catch {
     // 프록시 미지원 환경 대비 직접 호출 폴백 (URL에 키 노출 없이 x-goog-api-key 헤더 방식 사용)
-    const directUrl = `https://generativelanguage.googleapis.com/v1beta/models/${targetModel}:generateContent`;
+    const directUrl = `https://generativelanguage.googleapis.com/v1beta/models/${targetModel}:generateContent?key=${apiKey.trim()}`;
     response = await fetch(directUrl, {
       method: 'POST',
       headers: { 
@@ -256,11 +256,11 @@ export async function processConversationWithGemini(
       body: JSON.stringify(requestBody)
     });
 
-    if (!response.ok && response.status === 404) {
-      const fallbackModels = ['gemini-1.5-flash-latest', 'gemini-2.0-flash'];
+    if (!response.ok && (response.status === 404 || response.status === 400)) {
+      const fallbackModels = ['gemini-3.6-flash', 'gemini-3.8-flash', 'gemini-2.5-flash', 'gemini-2.0-flash'];
       for (const fbModel of fallbackModels) {
         if (fbModel === targetModel) continue;
-        const fbUrl = `https://generativelanguage.googleapis.com/v1beta/models/${fbModel}:generateContent`;
+        const fbUrl = `https://generativelanguage.googleapis.com/v1beta/models/${fbModel}:generateContent?key=${apiKey.trim()}`;
         const fbRes = await fetch(fbUrl, {
           method: 'POST',
           headers: { 

@@ -191,7 +191,7 @@ ${fullContext || '검색된 문서가 비어 있습니다.'}
 위 컨텍스트에서 질문에 해당하는 구체적인 사실을 찾아 명확하게 답변해 주세요.
 `;
 
-  const models = ['gemini-1.5-flash', 'gemini-1.5-flash-latest', 'gemini-2.0-flash'];
+  const models = ['gemini-3.6-flash', 'gemini-3.8-flash', 'gemini-2.5-flash', 'gemini-2.0-flash'];
   let data: any = null;
   let lastErr: any = null;
 
@@ -215,7 +215,7 @@ ${fullContext || '검색된 문서가 비어 있습니다.'}
           throw new Error('404_PROXY_FALLBACK');
         }
       } catch {
-        const directUrl = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`;
+        const directUrl = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${(apiKey || '').trim()}`;
         res = await fetch(directUrl, {
           method: 'POST',
           headers: {
@@ -398,7 +398,7 @@ export async function generateSettlementReportWithGemini(
 ): Promise<SettlementReport> {
   const prompt = `다음 워크스페이스 통계 데이터를 분석하고 인사이트 브리핑 JSON을 작성하세요:\n${JSON.stringify(stats, null, 2)}`;
 
-  const models = ['gemini-1.5-flash', 'gemini-1.5-flash-latest', 'gemini-2.0-flash'];
+  const models = ['gemini-3.6-flash', 'gemini-3.8-flash', 'gemini-2.5-flash', 'gemini-2.0-flash'];
   let data: any = null;
   let lastErr: any = null;
 
@@ -425,7 +425,7 @@ export async function generateSettlementReportWithGemini(
           throw new Error('404_PROXY_FALLBACK');
         }
       } catch {
-        const directUrl = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`;
+        const directUrl = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${(apiKey || '').trim()}`;
         res = await fetch(directUrl, {
           method: 'POST',
           headers: {

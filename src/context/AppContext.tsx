@@ -10,6 +10,7 @@ import type { GoogleSyncConfig } from '../types/dashboard';
 import type { BeginnerGuide, GuideAudience } from '../types/guide';
 import type { AuthUser } from '../types/auth';
 import { PRESET_TEMPLATES } from '../services/presetTemplates';
+import { SEPTEMBER_TOP_10_TEMPLATES } from '../services/curatedTemplates';
 import { processConversationWithGemini } from '../services/gemini';
 import { createNotionTemplateInWorkspace, applyPatchToRemoteWorkspace, appendGuideToggleToNotionPage } from '../services/notionApi';
 import { getGoogleSyncConfig, saveGoogleSyncConfig, saveArchivedTemplate } from '../services/archiveStorage';
@@ -97,6 +98,15 @@ interface AppContextType {
   applyPreset: (presetKey: string) => void;
   resetToDefault: () => void;
   updateCurrentCover: (newUrl: string) => void;
+
+  // 접속 월(2026년 9월) TOP 10 큐레이션 허브 및 인터랙티브 뷰 상태
+  isViewingCurationHub: boolean;
+  setIsViewingCurationHub: (viewing: boolean) => void;
+  selectedCuratedId: string | null;
+  setSelectedCuratedId: (id: string | null) => void;
+  loadCuratedTemplate: (curatedId: string) => void;
+  pendingChatPrompt: string;
+  setPendingChatPrompt: (prompt: string) => void;
 
   // 전역 알림 토스트 (Runtime Defense & Alerts)
   toast: { message: string; type: 'success' | 'error' | 'info' } | null;
@@ -207,9 +217,27 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
   const [isExportModalOpen, setIsExportModalOpen] = useState<boolean>(false);
 
   // Template & Chat State
-  const [currentTemplate, setCurrentTemplate] = useState<NotionTemplate | null>(PRESET_TEMPLATES.college_student);
+  const [currentTemplate, setCurrentTemplate] = useState<NotionTemplate | null>(
+    () => SEPTEMBER_TOP_10_TEMPLATES[0]?.template || PRESET_TEMPLATES.college_student
+  );
   const [messages, setMessages] = useState<ChatMessage[]>(() => getSavedChatMessages());
   const [isGenerating, setIsGenerating] = useState<boolean>(false);
+
+  // 접속 월(2026년 9월) 시즌 TOP 10 큐레이션 허브 & 인터랙티브 분석 뷰 상태
+  // 첫 접속 시 오른쪽 영역에 큐레이션 보드 리스트가 기본 노출됨
+  const [isViewingCurationHub, setIsViewingCurationHub] = useState<boolean>(true);
+  const [selectedCuratedId, setSelectedCuratedId] = useState<string | null>('curated-1');
+  const [pendingChatPrompt, setPendingChatPrompt] = useState<string>('');
+
+  const loadCuratedTemplate = (curatedId: string) => {
+    const item = SEPTEMBER_TOP_10_TEMPLATES.find(t => t.id === curatedId);
+    if (item) {
+      setCurrentTemplate(item.template);
+      setSelectedCuratedId(curatedId);
+      setIsViewingCurationHub(false);
+      showToast(`"${item.template.title}" 템플릿 분석 뷰로 전환되었습니다.`, 'info');
+    }
+  };
 
   // Sync Chat Messages with Local Storage
   useEffect(() => {
@@ -376,6 +404,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
           }
         }
 
+        setIsViewingCurationHub(false);
         if (window.innerWidth < 768) {
           setActiveMobileTab('preview');
         }
@@ -400,6 +429,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
         clearRecentModifications();
         triggerCelebration();
         setCurrentGuide(createFallbackGuide(template, 'general'));
+        setIsViewingCurationHub(false);
 
         if (window.innerWidth < 768) {
           setActiveMobileTab('preview');
@@ -645,6 +675,13 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
         applyPreset,
         resetToDefault,
         updateCurrentCover,
+        isViewingCurationHub,
+        setIsViewingCurationHub,
+        selectedCuratedId,
+        setSelectedCuratedId,
+        loadCuratedTemplate,
+        pendingChatPrompt,
+        setPendingChatPrompt,
         toast,
         showToast,
         hideToast

@@ -7,7 +7,7 @@ import { PromptSuggestionChips } from './PromptSuggestionChips';
 import { RotateCcw } from 'lucide-react';
 
 export const ChatContainer: React.FC = () => {
-  const { messages, clearChatHistory } = useApp();
+  const { messages, clearChatHistory, pendingChatPrompt, setPendingChatPrompt } = useApp();
   const [selectedPrompt, setSelectedPrompt] = useState<string>('');
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
@@ -18,6 +18,13 @@ export const ChatContainer: React.FC = () => {
   useEffect(() => {
     scrollToBottom();
   }, [messages]);
+
+  useEffect(() => {
+    if (pendingChatPrompt) {
+      setSelectedPrompt(pendingChatPrompt);
+      setPendingChatPrompt('');
+    }
+  }, [pendingChatPrompt, setPendingChatPrompt]);
 
   const handleClearHistory = () => {
     if (window.confirm('지금까지의 대화 기록을 모두 비우고 초기 상태로 리셋하시겠습니까?')) {
